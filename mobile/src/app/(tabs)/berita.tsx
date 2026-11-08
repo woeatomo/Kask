@@ -1,0 +1,52 @@
+import { router } from 'expo-router';
+import { useCallback } from 'react';
+import { Badge, Body, Card, Empty, Fab, Loading, Muted, Screen } from '@/components/ui';
+import { useCurrentCommunity } from '@/context/CommunityContext';
+import { tanggal } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
+import type { News } from '@/lib/types';
+import { must, useData } from '@/lib/useData';
+
+export default function Berita() {
+  const { communityId, isPengurus } = useCurrentCommunity();
+
+  const load = useCallback(async () => {
+    const res = await supabase
+      .from('news')
+      .select('*, profiles:author_id(full_name)')
+      .eq('community_id', communityId)
+      .order('is_pinned', { ascending: false })
+      .order('published_at', { ascending: false })
+      .limit(100);
+    return (must(res) ?? []) as News[];
+  }, [communityId]);
+
+  const { data, loading, refreshing, refresh } = useData<News[]>(load, []);
+  if (loading) return <Loading />;
+
+  return (
+    <Screen
+      refreshing={refreshing}
+      onRefresh={refresh}
+      footer={isPengurus ? <Fab icon="create-outline" onPress={() => router.push('/news/edit')} /> : undefined}
+    >
+      {data.length === 0 ? (
+        <Empty icon="newspaper-outline" text="Belum ada berita atau pengumuman" />
+      ) : (
+        data.map((n) => (
+          <Card key={n.id} onPress={() => router.push({ pathname: '/news/[id]', params: { id: n.id } })}>
+            {n.is_pinned && <Badge text="📌 Disematkan" tone="info" />}
+            <Body style={{ fontWeight: '700', fontSize: 16, marginTop: n.is_pinned ? 6 : 0 }}>{n.title}</Body>
+            <Muted>
+              {tanggal(n.published_at)}
+              {n.profiles?.full_name ? ` · ${n.profiles.full_name}` : ''}
+            </Muted>
+            <Body style={{ marginTop: 6 }} numberOfLines={3}>
+              {n.body}
+            </Body>
+          </Card>
+        ))
+      )}
+    </Screen>
+  );
+}
