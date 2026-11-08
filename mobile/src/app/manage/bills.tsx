@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import * as ScreenCapture from 'expo-screen-capture';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { useActionSheet } from '@/components/ActionSheet';
 import { useAuth } from '@/context/AuthContext';
 import { exportBillsRecapPdf } from '@/lib/pdf';
@@ -21,7 +22,16 @@ type Filter = 'semua' | BillStatus;
 
 export default function ManageBills() {
   const params = useLocalSearchParams<{ dueId: string; period?: string }>();
-  const { current, communityId, scopeRtUnitId, rtLabel } = useCurrentCommunity();
+  const { current, communityId, scopeRtUnitId, rtLabel, isPremium } = useCurrentCommunity();
+
+  // Rekap tagihan berisi data pribadi warga: cegah screenshot selama layar terbuka
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    ScreenCapture.preventScreenCaptureAsync('rekap-tagihan').catch(() => {});
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync('rekap-tagihan').catch(() => {});
+    };
+  }, []);
   const { profile } = useAuth();
   const [month, setMonth] = useState(() => monthStart(params.period ? parseDate(params.period) : new Date()));
   const [filter, setFilter] = useState<Filter>('semua');
@@ -52,6 +62,10 @@ export default function ManageBills() {
   const shown = filter === 'semua' ? bills : bills.filter((b) => b.status === filter);
 
   async function exportPdf() {
+    if (!isPremium) {
+      router.push('/premium');
+      return;
+    }
     try {
       await exportBillsRecapPdf({
         community: current.communities,
@@ -118,7 +132,7 @@ export default function ManageBills() {
           title: due.name,
           headerRight: () => (
             <Pressable onPress={exportPdf} hitSlop={10} disabled={bills.length === 0}>
-              <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+              <Ionicons name={isPremium ? 'document-text-outline' : 'lock-closed-outline'} size={24} color={colors.primary} />
             </Pressable>
           ),
         }}

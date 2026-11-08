@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useNavigation } from 'expo-router';
 import { useCallback, useLayoutEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { AdBanner } from '@/components/AdBanner';
 import { Badge, Body, Card, Empty, ListItem, Loading, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
@@ -131,6 +132,8 @@ export default function Home() {
           </>
         )}
       </Card>
+
+      <AdBanner />
 
       {isPengurus && (
         <>

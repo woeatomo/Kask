@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
+import { isPremiumCommunity } from '@/lib/plan';
 import { supabase } from '@/lib/supabase';
 import type { MembershipWithCommunity, RtUnit } from '@/lib/types';
 import { useAuth } from './AuthContext';
@@ -19,6 +21,8 @@ interface CommunityState {
   /** Ketua / pengurus tanpa batas RT / super admin */
   isFullPengurus: boolean;
   isKetua: boolean;
+  /** Komunitas aktif berlangganan Premium (tanpa iklan, export PDF) */
+  isPremium: boolean;
   /** RT yang menjadi batas wewenang pengurus ini (null = tidak dibatasi) */
   scopeRtUnitId: string | null;
   /** Boleh mengelola objek milik RT tsb? (null = objek tingkat komunitas) */
@@ -67,6 +71,14 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  // Muat ulang saat aplikasi kembali aktif (mis. paket baru diaktifkan admin)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
   const [rtUnits, setRtUnits] = useState<RtUnit[]>([]);
   const currentCommunityId = memberships.find((m) => m.community_id === currentId)?.community_id ?? null;
 
@@ -106,6 +118,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     isPengurus,
     isFullPengurus,
     isKetua: isSuper || current?.role === 'ketua',
+    isPremium: current ? isPremiumCommunity(current.communities) : false,
     scopeRtUnitId,
     rtUnits,
     rtLabel: (id) => {

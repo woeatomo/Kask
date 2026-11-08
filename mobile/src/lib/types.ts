@@ -7,6 +7,7 @@ export type BillStatus = 'belum_bayar' | 'menunggu_verifikasi' | 'lunas';
 export type PaymentStatus = 'menunggu' | 'diterima' | 'ditolak';
 export type PaymentMethod = 'tunai' | 'transfer' | 'qris' | 'lainnya';
 export type CashType = 'masuk' | 'keluar';
+export type CommunityPlan = 'free' | 'premium';
 
 export interface Profile {
   id: string;
@@ -30,6 +31,9 @@ export interface Community {
   bank_info: string | null;
   invite_code: string;
   is_active: boolean;
+  plan: CommunityPlan;
+  /** null + premium = tanpa batas waktu */
+  plan_expires_at: string | null;
 }
 
 export interface RtUnit {

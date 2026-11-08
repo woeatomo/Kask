@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import * as ScreenCapture from 'expo-screen-capture';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { Badge, Body, Button, Card, Chips, Empty, Fab, Loading, Muted, Screen, SectionTitle, Segmented, styles as ui } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
@@ -18,7 +19,19 @@ type KasFilter = string;
 
 export default function Kas() {
   const { profile } = useAuth();
-  const { current, communityId, isPengurus, canManageRt, rtUnits, rtLabel, scopeRtUnitId } = useCurrentCommunity();
+  const { current, communityId, isPengurus, isPremium, canManageRt, rtUnits, rtLabel, scopeRtUnitId } = useCurrentCommunity();
+
+  // Laporan kas tidak boleh di-screenshot / direkam layar selama halaman ini terbuka.
+  // Pakai focus effect (bukan mount) karena tab tetap ter-mount saat pindah tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'web') return;
+      ScreenCapture.preventScreenCaptureAsync('laporan-kas').catch(() => {});
+      return () => {
+        ScreenCapture.allowScreenCaptureAsync('laporan-kas').catch(() => {});
+      };
+    }, []),
+  );
   const [range, setRange] = useState<Range>('bulan');
   const [anchor, setAnchor] = useState(() => monthStart(new Date()));
   const [kas, setKas] = useState<KasFilter>(scopeRtUnitId ?? '');
@@ -62,6 +75,10 @@ export default function Kas() {
 
   async function exportPdf() {
     if (!data) return;
+    if (!isPremium) {
+      router.push('/premium');
+      return;
+    }
     setExporting(true);
     try {
       await exportCashReportPdf({
@@ -128,8 +145,8 @@ export default function Kas() {
             <Row label="Saldo akhir" value={data.report.closing_balance} bold />
           </Card>
           <Button
-            title="Export PDF"
-            icon="document-text-outline"
+            title={isPremium ? 'Export PDF' : 'Export PDF · Premium'}
+            icon={isPremium ? 'document-text-outline' : 'lock-closed-outline'}
             variant="secondary"
             loading={exporting}
             onPress={exportPdf}
@@ -193,6 +210,7 @@ export default function Kas() {
             </Card>
           )}
           <Muted style={{ textAlign: 'center', marginTop: space.sm }}>
+            🔒 Halaman laporan dilindungi dari screenshot & rekam layar.{'\n'}
             Pemasukan iuran tercatat otomatis saat pembayaran diverifikasi
             {isRW ? ', masuk ke kas RT jika iurannya khusus RT' : ''}.
           </Muted>

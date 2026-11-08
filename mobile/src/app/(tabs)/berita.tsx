@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
+import { AdBanner } from '@/components/AdBanner';
 import { Badge, Body, Card, Empty, Fab, Loading, Muted, Screen, styles as ui } from '@/components/ui';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { tanggal } from '@/lib/format';
@@ -35,8 +36,10 @@ export default function Berita() {
       {data.length === 0 ? (
         <Empty icon="newspaper-outline" text="Belum ada berita atau pengumuman" />
       ) : (
-        data.map((n) => (
-          <Card key={n.id} onPress={() => router.push({ pathname: '/news/[id]', params: { id: n.id } })}>
+        data.map((n, i) => (
+          <View key={n.id}>
+          {i === 3 && <AdBanner />}
+          <Card onPress={() => router.push({ pathname: '/news/[id]', params: { id: n.id } })}>
             <View style={[ui.row, { gap: space.xs }]}>
               {n.is_pinned && <Badge text="📌 Disematkan" tone="info" />}
               {n.rt_unit_id && <Badge text={`Khusus ${rtLabel(n.rt_unit_id) ?? 'RT'}`} tone="warning" />}
@@ -50,8 +53,10 @@ export default function Berita() {
               {n.body}
             </Body>
           </Card>
+          </View>
         ))
       )}
+      {data.length > 0 && data.length <= 3 && <AdBanner />}
     </Screen>
   );
 }

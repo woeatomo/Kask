@@ -23,7 +23,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Melihat **laporan kas** bulanan/tahunan (saldo awal, pemasukan, pengeluaran, per kategori) agar transparan
 - Membaca berita & pengumuman (termasuk pengumuman khusus RT-nya)
 - **Notifikasi** (push ke HP + kotak masuk di aplikasi): tagihan baru, pembayaran diterima/ditolak, berita baru, permintaan bergabung disetujui
-- **Export PDF** laporan kas untuk dibagikan ke grup WhatsApp atau dicetak
+- **Export PDF** laporan kas untuk dibagikan ke grup WhatsApp atau dicetak (Premium)
 - Satu akun bisa ikut beberapa komunitas dan berpindah di tab Akun
 
 **Pengurus** (ketua + pengurus lain seperti bendahara, sekretaris, ketua RT di dalam RW)
@@ -35,7 +35,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Mencatat pengeluaran dan pemasukan lain di buku kas
 - Menulis, menyematkan, dan menghapus berita bergambar
 - Notifikasi saat ada pembayaran yang perlu diverifikasi atau warga yang ingin bergabung
-- **Export PDF** rekap tagihan per iuran/bulan (lengkap dengan kolom tanda tangan)
+- **Export PDF** rekap tagihan per iuran/bulan (lengkap dengan kolom tanda tangan; Premium)
 
 **Ketua** (Ketua RW untuk komunitas RW, Ketua RT untuk komunitas RT)
 - Semua hak pengurus, ditambah:
@@ -46,7 +46,28 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 **Super admin (developer)**
 - Melihat semua komunitas beserta jumlah anggota, ketua, dan saldonya
 - Menonaktifkan/mengaktifkan komunitas
+- **Mengatur paket langganan** (Gratis/Premium, masa berlaku) dan melihat kontak ketua untuk penagihan
 - Dapat membaca data di semua komunitas untuk keperluan dukungan
+
+## Paket & monetisasi
+
+Langganan berlaku **per komunitas**: ketua yang berlangganan, dan semua anggotanya ikut menikmati.
+
+| | Gratis | Premium |
+|---|:-:|:-:|
+| Iuran, verifikasi, laporan kas di aplikasi, berita, notifikasi | ✓ | ✓ |
+| Export PDF laporan kas & rekap tagihan | 🔒 | ✓ |
+| Iklan banner (Beranda & Berita) | tampil | tidak ada |
+
+- **Aktivasi**: developer membuka Panel Admin → *Atur paket* → Premium 1 bulan / 12 bulan / uji coba 14 hari / tanpa batas, setelah komunitas membayar (transfer, invoice, dll.). Setiap perubahan dicatat di tabel `plan_changes`, dan ketua mendapat notifikasi. Premium otomatis kembali ke Gratis setelah tanggal berakhir.
+- **Kontak upgrade**: di layar Premium, ketua bisa menekan tombol WhatsApp ke nomor `EXPO_PUBLIC_UPGRADE_WHATSAPP`, dengan ID komunitas otomatis terisi di pesan.
+- **Iklan**: Google AdMob (`react-native-google-mobile-ads`) dengan formulir persetujuan UMP. Iklan hanya muncul di development build atau build store, bukan di Expo Go. Build development memakai iklan tes; untuk production isi `ADMOB_*_APP_ID` (dipakai `app.config.js`) dan `EXPO_PUBLIC_ADMOB_BANNER_*`.
+
+> **Perhatian kebijakan toko aplikasi.** Apple dan Google mewajibkan pembayaran *fitur digital* di dalam aplikasi memakai sistem mereka (Apple IAP / Google Play Billing). Karena itu, di iOS layar Premium tidak menampilkan harga maupun tombol kontak, hanya info untuk menghubungi pengelola. Skema langganan yang dijual langsung ke organisasi (RT/RW) umumnya masuk kategori layanan untuk organisasi, tetapi keputusan akhirnya ada di reviewer. Kalau ditolak, langkah berikutnya adalah memasang IAP (mis. RevenueCat) yang memanggil `admin_set_plan` lewat webhook server.
+
+## Perlindungan laporan
+
+Halaman **Laporan Kas** dan **Rekap Tagihan** memakai `expo-screen-capture`. Selama halaman itu terbuka, screenshot dan rekam layar diblokir: di Android (FLAG_SECURE) layar tersimpan hitam, dan di iOS 13+ diblokir oleh sistem. Perlindungan otomatis dilepas saat pindah halaman. Ini tidak bisa mencegah orang memotret layar dengan HP lain, dan pengguna Premium tetap bisa membagikan laporan lewat Export PDF.
 
 ## Wewenang per RT (komunitas RW)
 
@@ -144,7 +165,7 @@ Sebelum rilis, ganti `ios.bundleIdentifier` / `android.package` di `mobile/app.j
 
 ## Tes
 
-Tes database menjalankan 90 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), dan antrean push (tidak terkirim dua kali).
+Tes database menjalankan 105 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), serta paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis).
 
 ```bash
 DATABASE_URL=postgres://postgres@localhost:5432/kask_test ./supabase/tests/run_local.sh
@@ -170,7 +191,8 @@ cd mobile && npm run typecheck
 
 ## Ide pengembangan berikutnya
 
-- Pembayaran otomatis via payment gateway (Midtrans/Xendit), dengan webhook menandai lunas
+- Pembayaran langganan Premium in-app (RevenueCat / Google Play Billing / Apple IAP)
+- Pembayaran iuran otomatis via payment gateway (Midtrans/Xendit), dengan webhook menandai lunas
 - Pengingat jatuh tempo otomatis (pg_cron yang menulis ke `notifications`)
 - Export Excel
 - Pengaturan notifikasi per jenis (mis. matikan notifikasi berita)
