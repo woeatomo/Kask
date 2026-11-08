@@ -1,22 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Linking, Platform, Text, View } from 'react-native';
 import { Badge, Body, Button, Card, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { communityLabel, tanggal } from '@/lib/format';
-import { PREMIUM_BENEFITS, PREMIUM_PRICE_LABEL, UPGRADE_WHATSAPP } from '@/lib/plan';
+import { PREMIUM_BENEFITS, PREMIUM_PRICE_LABEL, UPGRADE_WHATSAPP, type CommunityUsage } from '@/lib/plan';
+import { supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 
 export default function Premium() {
-  const { current, isPremium, isKetua, refresh } = useCurrentCommunity();
+  const { current, communityId, isPremium, isKetua, refresh } = useCurrentCommunity();
   const c = current.communities;
+  const [usage, setUsage] = useState<CommunityUsage | null>(null);
 
   // Status paket bisa berubah dari panel admin; muat ulang setiap layar dibuka
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      supabase.rpc('community_usage', { p_community_id: communityId }).then(({ data }) => {
+        if (data) setUsage(data as CommunityUsage);
+      });
+    }, [refresh, communityId]),
   );
 
   // App Store melarang tautan ke pembayaran di luar aplikasi untuk fitur digital,
@@ -44,6 +49,13 @@ export default function Premium() {
           </View>
         </View>
       </Card>
+
+      {usage && (
+        <Muted style={{ marginBottom: space.sm }}>
+          Anggota aktif: {usage.active_members}
+          {usage.member_limit !== null ? ` dari batas ${usage.member_limit} (paket Gratis)` : ' (tanpa batas)'}
+        </Muted>
+      )}
 
       <SectionTitle>Keuntungan Premium</SectionTitle>
       <Card style={{ paddingVertical: space.sm }}>

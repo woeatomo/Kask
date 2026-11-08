@@ -24,6 +24,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Membaca berita & pengumuman (termasuk pengumuman khusus RT-nya)
 - **Notifikasi** (push ke HP + kotak masuk di aplikasi): tagihan baru, pembayaran diterima/ditolak, berita baru, permintaan bergabung disetujui
 - **Export PDF** laporan kas untuk dibagikan ke grup WhatsApp atau dicetak (Premium)
+- Bantuan & FAQ, Kebijakan Privasi, dan **hapus akun** sendiri
 - Satu akun bisa ikut beberapa komunitas dan berpindah di tab Akun
 
 **Pengurus** (ketua + pengurus lain seperti bendahara, sekretaris, ketua RT di dalam RW)
@@ -57,13 +58,30 @@ Langganan berlaku **per komunitas**: ketua yang berlangganan, dan semua anggotan
 |---|:-:|:-:|
 | Iuran, verifikasi, laporan kas di aplikasi, berita, notifikasi | ✓ | ✓ |
 | Export PDF laporan kas & rekap tagihan | 🔒 | ✓ |
+| Jumlah anggota aktif per komunitas | maks. 50* | tanpa batas |
 | Iklan banner (Beranda & Berita) | tampil | tidak ada |
+
+\* Bisa diubah developer di Panel Admin → *Pengaturan paket Gratis* (tersimpan di tabel `app_settings`). Saat batas tercapai, pendaftar baru tetap bisa mengajukan, tetapi baru bisa disetujui setelah komunitas Premium. Anggota yang sudah ada tidak pernah dikeluarkan otomatis.
 
 - **Aktivasi**: developer membuka Panel Admin → *Atur paket* → Premium 1 bulan / 12 bulan / uji coba 14 hari / tanpa batas, setelah komunitas membayar (transfer, invoice, dll.). Setiap perubahan dicatat di tabel `plan_changes`, dan ketua mendapat notifikasi. Premium otomatis kembali ke Gratis setelah tanggal berakhir.
 - **Kontak upgrade**: di layar Premium, ketua bisa menekan tombol WhatsApp ke nomor `EXPO_PUBLIC_UPGRADE_WHATSAPP`, dengan ID komunitas otomatis terisi di pesan.
 - **Iklan**: Google AdMob (`react-native-google-mobile-ads`) dengan formulir persetujuan UMP. Iklan hanya muncul di development build atau build store, bukan di Expo Go. Build development memakai iklan tes; untuk production isi `ADMOB_*_APP_ID` (dipakai `app.config.js`) dan `EXPO_PUBLIC_ADMOB_BANNER_*`.
 
 > **Perhatian kebijakan toko aplikasi.** Apple dan Google mewajibkan pembayaran *fitur digital* di dalam aplikasi memakai sistem mereka (Apple IAP / Google Play Billing). Karena itu, di iOS layar Premium tidak menampilkan harga maupun tombol kontak, hanya info untuk menghubungi pengelola. Skema langganan yang dijual langsung ke organisasi (RT/RW) umumnya masuk kategori layanan untuk organisasi, tetapi keputusan akhirnya ada di reviewer. Kalau ditolak, langkah berikutnya adalah memasang IAP (mis. RevenueCat) yang memanggil `admin_set_plan` lewat webhook server.
+
+## FAQ, Kebijakan Privasi, dan hapus akun
+
+- Layar **Bantuan & FAQ** (dengan pencarian) dan **Kebijakan Privasi** bisa dibuka tanpa login dari layar masuk, dan juga dari tab Akun. Layar daftar menampilkan persetujuan Kebijakan Privasi.
+- Isinya ditulis sekali di `mobile/src/content/legal.ts`. Kebijakan Privasi disusun mengacu UU No. 27/2022 tentang Pelindungan Data Pribadi.
+- **Halaman publik** (wajib untuk Play Console & App Store Connect): jalankan
+  ```bash
+  cd mobile && DEVELOPER_NAME="Nama Anda" SUPPORT_EMAIL="dukungan@domain.com" npm run legal:html
+  ```
+  lalu publikasikan folder `docs/`, misalnya lewat GitHub Pages (Settings → Pages → branch, folder `/docs`). Gunakan URL `…/privacy-policy.html` sebagai Privacy Policy URL, dan `…/index.html` sebagai URL penghapusan akun di Play Console.
+- Isi juga `EXPO_PUBLIC_DEVELOPER_NAME` dan `EXPO_PUBLIC_SUPPORT_EMAIL` di `.env` / EAS agar versi di aplikasi tidak menampilkan placeholder.
+- **Hapus akun** (wajib App Store & Google Play): Akun → Hapus akun. Login dihapus, profil dianonimkan ("Akun dihapus"), HP/alamat/token/notifikasi dihapus, keanggotaan dinonaktifkan. Catatan tagihan, pembayaran, dan kas komunitas **tetap utuh** agar laporan tidak berubah. Ketua harus menyerahkan jabatan dulu; ketua yang sendirian ikut menghapus komunitasnya.
+
+> Kebijakan Privasi ini adalah draf yang disusun dari cara aplikasi benar-benar memproses data. Sebaiknya ditinjau oleh konsultan hukum sebelum rilis publik.
 
 ## Perlindungan laporan
 
@@ -165,7 +183,7 @@ Sebelum rilis, ganti `ios.bundleIdentifier` / `android.package` di `mobile/app.j
 
 ## Tes
 
-Tes database menjalankan 105 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), serta paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis).
+Tes database menjalankan 123 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis), batas anggota paket Gratis, dan hapus akun (data pribadi hilang, catatan kas komunitas tetap utuh).
 
 ```bash
 DATABASE_URL=postgres://postgres@localhost:5432/kask_test ./supabase/tests/run_local.sh

@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Alert, View } from 'react-native';
+import { router } from 'expo-router';
 import { useActionSheet, type SheetOption } from '@/components/ActionSheet';
-import { Badge, Body, Button, Card, Chips, Empty, ListItem, Loading, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
+import { Badge, Body, Button, Card, Chips, Empty, ListItem, Loading, Muted, ProgressBar, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useCommunity, useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, tanggal } from '@/lib/format';
+import type { CommunityUsage } from '@/lib/plan';
 import { errorMessage, supabase } from '@/lib/supabase';
-import { space } from '@/lib/theme';
+import { colors, space } from '@/lib/theme';
 import type { MemberRole, MemberRow } from '@/lib/types';
 import { must, useData } from '@/lib/useData';
 
@@ -18,6 +20,7 @@ export default function Members() {
   const sheet = useActionSheet();
 
   const load = useCallback(async () => {
+    const usageRes = await supabase.rpc('community_usage', { p_community_id: communityId });
     const m = await supabase
       .from('memberships')
       .select('*, profiles(full_name, phone), rt_units:rt_units!memberships_rt_unit_id_community_id_fkey(rt_number)')
@@ -28,10 +31,10 @@ export default function Members() {
         ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
         (a.profiles?.full_name ?? '').localeCompare(b.profiles?.full_name ?? ''),
     );
-    return { members };
+    return { members, usage: must(usageRes) as CommunityUsage };
   }, [communityId]);
 
-  const { data, loading, refreshing, refresh, reload } = useData<{ members: MemberRow[] } | null>(load, null);
+  const { data, loading, refreshing, refresh, reload } = useData<{ members: MemberRow[]; usage: CommunityUsage } | null>(load, null);
   if (loading || !data) return <Loading />;
 
   const pending = data.members.filter((m) => m.status === 'pending');
@@ -42,7 +45,14 @@ export default function Members() {
   async function rpc(fn: string, args: Record<string, unknown>) {
     const { error } = await supabase.rpc(fn, args);
     if (error) {
-      Alert.alert('Gagal', errorMessage(error));
+      if (error.hint === 'member_limit') {
+        Alert.alert('Batas anggota tercapai', error.message, [
+          { text: 'Nanti', style: 'cancel' },
+          { text: 'Lihat Premium', onPress: () => router.push('/premium') },
+        ]);
+      } else {
+        Alert.alert('Gagal', errorMessage(error));
+      }
       return false;
     }
     reload();
@@ -148,8 +158,35 @@ export default function Members() {
     />
   );
 
+  const { usage } = data;
+  const full = usage.member_limit !== null && usage.active_members >= usage.member_limit;
+
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
+      {usage.member_limit !== null && (
+        <Card style={full ? { borderColor: colors.warning, backgroundColor: colors.warningSoft } : undefined}>
+          <View style={[ui.row, { justifyContent: 'space-between' }]}>
+            <Body style={{ fontWeight: '700' }}>
+              {usage.active_members} / {usage.member_limit} anggota aktif
+            </Body>
+            <Badge text="Paket Gratis" />
+          </View>
+          <ProgressBar value={usage.active_members / usage.member_limit} />
+          {full ? (
+            <Muted style={{ marginTop: space.sm, color: colors.warning }}>
+              Batas tercapai. Warga baru belum bisa disetujui sampai komunitas beralih ke Premium.
+            </Muted>
+          ) : null}
+          <Button
+            title={full ? 'Upgrade ke Premium' : 'Anggota tanpa batas dengan Premium'}
+            small
+            variant={full ? 'primary' : 'ghost'}
+            icon="star-outline"
+            onPress={() => router.push('/premium')}
+            style={{ alignSelf: 'flex-start', marginTop: space.sm }}
+          />
+        </Card>
+      )}
       {pending.length > 0 && (
         <>
           <SectionTitle>Permintaan bergabung ({pending.length})</SectionTitle>

@@ -33,6 +33,9 @@ function RootNavigator() {
     >
       {/* index mengarahkan ke layar yang sesuai dengan status login */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      {/* bisa dibuka tanpa login (wajib untuk kebijakan toko aplikasi) */}
+      <Stack.Screen name="faq" options={{ title: 'Bantuan & FAQ' }} />
+      <Stack.Screen name="privacy" options={{ title: 'Kebijakan Privasi' }} />
 
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

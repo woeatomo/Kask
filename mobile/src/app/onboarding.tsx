@@ -75,6 +75,7 @@ export default function Onboarding() {
       {profile?.is_super_admin && (
         <Button title="Panel Admin" icon="shield-checkmark-outline" variant="secondary" onPress={() => router.push('/admin')} style={{ marginBottom: space.md }} />
       )}
+      <Button title="Bantuan & FAQ" variant="ghost" icon="help-circle-outline" onPress={() => router.push('/faq')} />
       <Button title="Keluar" variant="ghost" onPress={signOut} />
     </Screen>
   );

@@ -40,6 +40,14 @@ export default function Login() {
             Daftar
           </Link>
         </View>
+        <View style={[ui.row, { justifyContent: 'center', marginTop: space.xl, gap: space.lg }]}>
+          <Link href="/faq" style={{ color: colors.muted, fontSize: 13 }}>
+            Bantuan & FAQ
+          </Link>
+          <Link href="/privacy" style={{ color: colors.muted, fontSize: 13 }}>
+            Kebijakan Privasi
+          </Link>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

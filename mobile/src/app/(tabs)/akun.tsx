@@ -5,6 +5,7 @@ import { Badge, Body, Button, Card, ListItem, Muted, Screen, SectionTitle, style
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, communityLabel } from '@/lib/format';
+import { unregisterPush } from '@/lib/push';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 
@@ -18,6 +19,28 @@ export default function Akun() {
     Share.share({
       message: `Gabung ke ${c.name} (${communityLabel(c)}) di aplikasi Kask dengan kode undangan: ${c.invite_code}`,
     });
+  }
+
+  function deleteAccount() {
+    Alert.alert(
+      'Hapus akun?',
+      'Login, nama, nomor HP, alamat, dan notifikasi Anda akan dihapus permanen. Catatan iuran dan kas komunitas tetap disimpan tanpa nama agar laporan kas tetap akurat. Tindakan ini tidak bisa dibatalkan.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus permanen',
+          style: 'destructive',
+          onPress: async () => {
+            await unregisterPush().catch(() => {});
+            const { error } = await supabase.rpc('delete_my_account');
+            if (error) return Alert.alert('Tidak bisa menghapus akun', errorMessage(error));
+            // sesi sudah tidak berlaku di server; bersihkan sesi lokal saja
+            await supabase.auth.signOut({ scope: 'local' });
+            Alert.alert('Akun dihapus', 'Terima kasih telah menggunakan Kask.');
+          },
+        },
+      ],
+    );
   }
 
   function leave() {
@@ -123,7 +146,13 @@ export default function Akun() {
         )}
       </Card>
 
+      <Card style={{ paddingVertical: space.xs }}>
+        <ListItem icon="help-circle-outline" title="Bantuan & FAQ" onPress={() => router.push('/faq')} />
+        <ListItem icon="shield-checkmark-outline" title="Kebijakan Privasi" onPress={() => router.push('/privacy')} />
+      </Card>
+
       <Button title="Keluar akun" variant="ghost" icon="log-out-outline" onPress={signOut} />
+      <Button title="Hapus akun" variant="ghost" icon="trash-outline" onPress={deleteAccount} style={{ marginTop: space.sm }} />
     </Screen>
   );
 }

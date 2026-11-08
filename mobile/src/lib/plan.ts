@@ -8,6 +8,7 @@ export function isPremiumCommunity(c: Pick<Community, 'plan' | 'plan_expires_at'
 export const PREMIUM_BENEFITS = [
   { icon: 'document-text-outline', title: 'Export PDF laporan kas', desc: 'Bulanan/tahunan, siap dibagikan ke grup atau dicetak' },
   { icon: 'people-outline', title: 'Export PDF rekap tagihan', desc: 'Daftar warga lunas & belum lunas per iuran' },
+  { icon: 'people-circle-outline', title: 'Anggota tanpa batas', desc: 'Paket Gratis dibatasi jumlah anggota aktif' },
   { icon: 'eye-off-outline', title: 'Tanpa iklan', desc: 'Untuk seluruh pengurus dan warga di komunitas' },
 ] as const;
 
@@ -17,3 +18,10 @@ export const PREMIUM_BENEFITS = [
  */
 export const UPGRADE_WHATSAPP = process.env.EXPO_PUBLIC_UPGRADE_WHATSAPP ?? '';
 export const PREMIUM_PRICE_LABEL = process.env.EXPO_PUBLIC_PREMIUM_PRICE_LABEL ?? '';
+
+export interface CommunityUsage {
+  active_members: number;
+  /** null = tanpa batas (Premium) */
+  member_limit: number | null;
+  is_premium: boolean;
+}

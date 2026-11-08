@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input, Muted, Title } from '@/components/ui';
 import { errorMessage, supabase } from '@/lib/supabase';
@@ -42,6 +42,13 @@ export default function Register() {
         <Input label="No. HP (opsional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
         <Input label="Password" value={password} onChangeText={setPassword} secureTextEntry hint="Minimal 6 karakter" />
+        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: space.md, lineHeight: 18 }}>
+          Dengan mendaftar, Anda menyetujui pemrosesan data sesuai{' '}
+          <Link href="/privacy" style={{ color: colors.primary, fontWeight: '600' }}>
+            Kebijakan Privasi
+          </Link>{' '}
+          Kask.
+        </Text>
         <Button title="Daftar" onPress={submit} loading={loading} />
         <Button title="Sudah punya akun? Masuk" variant="ghost" onPress={() => router.back()} style={{ marginTop: space.sm }} />
       </ScrollView>

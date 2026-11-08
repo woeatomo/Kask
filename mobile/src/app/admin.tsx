@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useActionSheet } from '@/components/ActionSheet';
-import { Badge, Body, Button, Card, Chips, Empty, Loading, Muted, Screen, styles as ui } from '@/components/ui';
+import { Badge, Body, Button, Card, Chips, Empty, Input, Loading, Muted, Screen, styles as ui } from '@/components/ui';
 import { communityLabel, rupiah, tanggal } from '@/lib/format';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { space } from '@/lib/theme';
@@ -34,6 +34,24 @@ export default function Admin() {
   const { data, loading, refreshing, refresh, reload } = useData<AdminRow[]>(load, []);
   const sheet = useActionSheet();
   const [filter, setFilter] = useState<Filter>('semua');
+  const [limitText, setLimitText] = useState('');
+  const [savingLimit, setSavingLimit] = useState(false);
+
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'free_member_limit').maybeSingle()
+      .then(({ data: row }) => setLimitText(row ? String(row.value) : '50'));
+  }, []);
+
+  async function saveLimit() {
+    const n = Number(limitText);
+    if (!Number.isInteger(n) || n < 1) return Alert.alert('Batas anggota harus bilangan bulat ≥ 1');
+    setSavingLimit(true);
+    const { error } = await supabase.rpc('admin_set_setting', { p_key: 'free_member_limit', p_value: n });
+    setSavingLimit(false);
+    if (error) return Alert.alert('Gagal', errorMessage(error));
+    Alert.alert('Tersimpan', `Batas anggota paket Gratis: ${n}`);
+  }
+
   if (loading) return <Loading />;
 
   async function setPlan(c: AdminRow, plan: 'free' | 'premium', expires: string | null, note: string) {
@@ -99,6 +117,21 @@ export default function Admin() {
         <Muted>
           {totalMembers} anggota aktif · {premiumCount} premium
         </Muted>
+      </Card>
+      <Card>
+        <Body style={{ fontWeight: '700', marginBottom: space.sm }}>Pengaturan paket Gratis</Body>
+        <View style={[ui.row, { gap: space.sm, alignItems: 'flex-start' }]}>
+          <View style={{ flex: 1 }}>
+            <Input
+              label="Batas anggota aktif per komunitas"
+              value={limitText}
+              onChangeText={(t) => setLimitText(t.replace(/[^\d]/g, ''))}
+              keyboardType="number-pad"
+            />
+          </View>
+          <Button title="Simpan" small loading={savingLimit} onPress={saveLimit} style={{ marginTop: 26 }} />
+        </View>
+        <Muted>Anggota yang sudah ada tidak dikeluarkan; hanya persetujuan anggota baru yang ditahan.</Muted>
       </Card>
       <Chips
         value={filter}
