@@ -15,7 +15,12 @@ const CATEGORIES: Record<CashType, string[]> = {
 
 export default function CashForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { communityId } = useCurrentCommunity();
+  const { communityId, rtUnits, canManageRt, scopeRtUnitId } = useCurrentCommunity();
+  const [rtUnit, setRtUnit] = useState(scopeRtUnitId ?? '');
+  const kasOptions = [
+    ...(canManageRt(null) ? [{ value: '', label: 'Kas RW' }] : []),
+    ...rtUnits.filter((r) => canManageRt(r.id)).map((r) => ({ value: r.id, label: `Kas RT ${r.rt_number}` })),
+  ];
   const [type, setType] = useState<CashType>('keluar');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Lainnya');
@@ -33,6 +38,7 @@ export default function CashForm() {
       setCategory(t.category);
       setDescription(t.description ?? '');
       setDate(t.trx_date);
+      setRtUnit(t.rt_unit_id ?? '');
     });
   }, [id]);
 
@@ -40,7 +46,14 @@ export default function CashForm() {
     const amt = parseAmount(amount);
     if (amt <= 0) return Alert.alert('Nominal wajib diisi');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date))) return Alert.alert('Format tanggal: YYYY-MM-DD');
-    const row = { type, amount: amt, category: category.trim() || 'Lainnya', description: description.trim() || null, trx_date: date };
+    const row = {
+      type,
+      amount: amt,
+      category: category.trim() || 'Lainnya',
+      description: description.trim() || null,
+      trx_date: date,
+      rt_unit_id: rtUnit || null,
+    };
     setSaving(true);
     const { error } = id
       ? await supabase.from('cash_transactions').update(row).eq('id', id)
@@ -79,6 +92,12 @@ export default function CashForm() {
           { value: 'masuk', label: 'Pemasukan lain' },
         ]}
       />
+      {rtUnits.length > 0 && (
+        <>
+          <Muted style={{ marginBottom: space.sm }}>Buku kas</Muted>
+          <Chips value={rtUnit} onChange={setRtUnit} options={kasOptions} />
+        </>
+      )}
       <Input
         label="Nominal"
         value={amount}

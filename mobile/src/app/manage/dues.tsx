@@ -11,7 +11,7 @@ import type { Due } from '@/lib/types';
 import { must, useData } from '@/lib/useData';
 
 export default function ManageDues() {
-  const { communityId } = useCurrentCommunity();
+  const { communityId, canManageRt, scopeRtUnitId, rtLabel } = useCurrentCommunity();
   const [month, setMonth] = useState(() => monthStart(new Date()));
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -28,7 +28,12 @@ export default function ManageDues() {
   function generate(d: Due) {
     const period = d.frequency === 'bulanan' ? month : new Date();
     const label = d.frequency === 'bulanan' ? bulanTahun(month) : 'hari ini';
-    Alert.alert('Buat tagihan', `Buat tagihan "${d.name}" ${rupiah(d.amount)} untuk ${label} bagi semua warga aktif${d.rt_unit_id ? ' di RT terkait' : ''}?`, [
+    const target = scopeRtUnitId
+      ? `warga ${rtLabel(scopeRtUnitId)}`
+      : d.rt_unit_id
+        ? `warga ${rtLabel(d.rt_unit_id) ?? 'RT terkait'}`
+        : 'semua warga aktif';
+    Alert.alert('Buat tagihan', `Buat tagihan "${d.name}" ${rupiah(d.amount)} untuk ${label} bagi ${target}?`, [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Buat',
@@ -68,11 +73,12 @@ export default function ManageDues() {
               <Muted>
                 {rupiah(d.amount)} · {d.frequency === 'bulanan' ? `bulanan, jatuh tempo tgl ${d.due_day}` : 'sekali bayar'}
               </Muted>
+              <Muted>{d.rt_unit_id ? `Khusus ${rtLabel(d.rt_unit_id) ?? 'RT'}` : 'Seluruh warga'}</Muted>
             </View>
             {!d.is_active && <Badge text="Nonaktif" />}
           </View>
           <View style={[ui.row, { gap: space.sm, marginTop: space.md, flexWrap: 'wrap' }]}>
-            {d.is_active && (
+            {d.is_active && (canManageRt(d.rt_unit_id) || (!!scopeRtUnitId && !d.rt_unit_id)) && (
               <Button title="Buat tagihan" small icon="add" loading={busy === d.id} onPress={() => generate(d)} />
             )}
             <Button
@@ -81,7 +87,9 @@ export default function ManageDues() {
               variant="secondary"
               onPress={() => router.push({ pathname: '/manage/bills', params: { dueId: d.id, period: isoDate(month) } })}
             />
-            <Button title="Edit" small variant="ghost" onPress={() => router.push({ pathname: '/manage/due-form', params: { id: d.id } })} />
+            {canManageRt(d.rt_unit_id) && (
+              <Button title="Edit" small variant="ghost" onPress={() => router.push({ pathname: '/manage/due-form', params: { id: d.id } })} />
+            )}
           </View>
         </Card>
       ))}
@@ -89,11 +97,17 @@ export default function ManageDues() {
       <SectionTitle>Iuran sukarela / donasi</SectionTitle>
       {sukarela.length === 0 && <Empty icon="heart-outline" text="Belum ada penggalangan dana" />}
       {sukarela.map((d) => (
-        <Card key={d.id} onPress={() => router.push({ pathname: '/manage/due-form', params: { id: d.id } })}>
+        <Card
+          key={d.id}
+          onPress={canManageRt(d.rt_unit_id) ? () => router.push({ pathname: '/manage/due-form', params: { id: d.id } }) : undefined}
+        >
           <View style={[ui.row, { justifyContent: 'space-between' }]}>
             <View style={{ flex: 1 }}>
               <Body style={{ fontWeight: '700' }}>{d.name}</Body>
-              <Muted>{d.target_amount ? `Target ${rupiah(d.target_amount)}` : 'Tanpa target'}</Muted>
+              <Muted>
+                {d.target_amount ? `Target ${rupiah(d.target_amount)}` : 'Tanpa target'}
+                {d.rt_unit_id ? ` · Khusus ${rtLabel(d.rt_unit_id) ?? 'RT'}` : ''}
+              </Muted>
             </View>
             {!d.is_active ? <Badge text="Ditutup" /> : <Badge text="Aktif" tone="success" />}
           </View>

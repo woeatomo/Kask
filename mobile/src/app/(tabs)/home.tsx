@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { useCallback } from 'react';
-import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useNavigation } from 'expo-router';
+import { useCallback, useLayoutEffect } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { Badge, Body, Card, Empty, ListItem, Loading, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
@@ -16,15 +17,43 @@ interface HomeData {
   unpaidTotal: number;
   pendingPayments: number;
   pendingMembers: number;
+  unreadNotifications: number;
   news: News[];
+}
+
+function Bell({ count }: { count: number }) {
+  return (
+    <Pressable onPress={() => router.push('/notifications')} hitSlop={10} style={{ marginRight: space.lg }}>
+      <Ionicons name={count ? 'notifications' : 'notifications-outline'} size={24} color={colors.primary} />
+      {count > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -4,
+            right: -6,
+            minWidth: 18,
+            height: 18,
+            borderRadius: 9,
+            backgroundColor: colors.danger,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{count > 99 ? '99+' : count}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
 }
 
 export default function Home() {
   const { profile } = useAuth();
-  const { current, communityId, isPengurus } = useCurrentCommunity();
+  const { current, communityId, isPengurus, scopeRtUnitId, rtLabel } = useCurrentCommunity();
+  const navigation = useNavigation();
 
   const load = useCallback(async (): Promise<HomeData> => {
-    const [report, bills, news] = await Promise.all([
+    const [report, bills, news, unread] = await Promise.all([
       supabase.rpc('cash_report', { p_community_id: communityId, p_from: '2000-01-01', p_to: isoDate(new Date()) }),
       supabase
         .from('bills')
@@ -39,6 +68,11 @@ export default function Home() {
         .order('is_pinned', { ascending: false })
         .order('published_at', { ascending: false })
         .limit(3),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', current.user_id)
+        .is('read_at', null),
     ]);
     const unpaid = must(bills) ?? [];
     let pendingPayments = 0;
@@ -57,11 +91,17 @@ export default function Home() {
       unpaidTotal: unpaid.reduce((s, b) => s + Number(b.amount), 0),
       pendingPayments,
       pendingMembers,
+      unreadNotifications: unread.count ?? 0,
       news: (must(news) ?? []) as News[],
     };
-  }, [communityId, current.id, isPengurus]);
+  }, [communityId, current.id, current.user_id, isPengurus]);
 
   const { data, loading, refreshing, refresh } = useData<HomeData | null>(load, null);
+  const unread = data?.unreadNotifications ?? 0;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: () => <Bell count={unread} /> });
+  }, [navigation, unread]);
   if (loading || !data) return <Loading />;
 
   return (
@@ -70,6 +110,7 @@ export default function Home() {
       <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{profile?.full_name || 'Warga'}</Text>
       <View style={[ui.row, { gap: space.sm, marginTop: 4, marginBottom: space.lg }]}>
         <Badge text={current.position || (current.role === 'warga' ? 'Warga' : current.role)} tone="info" />
+        {scopeRtUnitId ? <Badge text={`Wewenang ${rtLabel(scopeRtUnitId)}`} tone="warning" /> : null}
         <Muted>{communityLabel(current.communities)}</Muted>
       </View>
 
@@ -120,8 +161,11 @@ export default function Home() {
       ) : (
         data.news.map((n) => (
           <Card key={n.id} onPress={() => router.push({ pathname: '/news/[id]', params: { id: n.id } })}>
-            {n.is_pinned && <Badge text="📌 Disematkan" tone="info" />}
-            <Body style={{ fontWeight: '700', marginTop: n.is_pinned ? 6 : 0 }}>{n.title}</Body>
+            <View style={[ui.row, { gap: space.xs }]}>
+              {n.is_pinned && <Badge text="📌 Disematkan" tone="info" />}
+              {n.rt_unit_id && <Badge text={`Khusus ${rtLabel(n.rt_unit_id) ?? 'RT'}`} tone="warning" />}
+            </View>
+            <Body style={{ fontWeight: '700', marginTop: n.is_pinned || n.rt_unit_id ? 6 : 0 }}>{n.title}</Body>
             <Muted>{tanggal(n.published_at)}</Muted>
             <Body style={{ marginTop: 6 }} numberOfLines={2}>
               {n.body}

@@ -6,11 +6,11 @@ import { useCurrentCommunity } from '@/context/CommunityContext';
 import { parseAmount, rupiah } from '@/lib/format';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
-import type { Due, DueFrequency, DueKind, RtUnit } from '@/lib/types';
+import type { Due, DueFrequency, DueKind } from '@/lib/types';
 
 export default function DueForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { communityId, current } = useCurrentCommunity();
+  const { communityId, current, rtUnits: allRt, canManageRt, scopeRtUnitId } = useCurrentCommunity();
   const [kind, setKind] = useState<DueKind>('wajib');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -18,16 +18,11 @@ export default function DueForm() {
   const [amount, setAmount] = useState('');
   const [target, setTarget] = useState('');
   const [dueDay, setDueDay] = useState('10');
-  const [rtUnit, setRtUnit] = useState('');
+  const [rtUnit, setRtUnit] = useState(scopeRtUnitId ?? '');
   const [active, setActive] = useState(true);
-  const [rtUnits, setRtUnits] = useState<RtUnit[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (current.communities.type === 'RW') {
-      supabase.from('rt_units').select('*').eq('community_id', communityId).order('rt_number')
-        .then(({ data }) => setRtUnits((data ?? []) as RtUnit[]));
-    }
     if (!id) return;
     supabase.from('dues').select('*').eq('id', id).single().then(({ data }) => {
       const d = data as Due | null;
@@ -42,7 +37,7 @@ export default function DueForm() {
       setRtUnit(d.rt_unit_id ?? '');
       setActive(d.is_active);
     });
-  }, [id, communityId, current.communities.type]);
+  }, [id]);
 
   async function save() {
     const amt = parseAmount(amount);
@@ -135,13 +130,16 @@ export default function DueForm() {
         />
       )}
 
-      {rtUnits.length > 0 && (
+      {allRt.length > 0 && (
         <>
           <Muted style={{ marginBottom: space.sm }}>Berlaku untuk</Muted>
           <Chips
             value={rtUnit}
             onChange={setRtUnit}
-            options={[{ value: '', label: 'Semua RT' }, ...rtUnits.map((r) => ({ value: r.id, label: `RT ${r.rt_number}` }))]}
+            options={[
+              ...(canManageRt(null) ? [{ value: '', label: 'Semua RT (kas RW)' }] : []),
+              ...allRt.filter((r) => canManageRt(r.id)).map((r) => ({ value: r.id, label: `RT ${r.rt_number} (kas RT)` })),
+            ]}
           />
         </>
       )}

@@ -3,7 +3,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { MembershipWithCommunity } from '@/lib/types';
+import type { MembershipWithCommunity, RtUnit } from '@/lib/types';
 import { useAuth } from './AuthContext';
 
 const ACTIVE_KEY = 'kask.activeCommunityId';
@@ -14,8 +14,19 @@ interface CommunityState {
   /** Keanggotaan aktif yang sedang dipilih */
   current: MembershipWithCommunity | null;
   loading: boolean;
+  /** Pengurus apa pun (termasuk yang dibatasi per RT) — untuk menampilkan menu pengurus */
   isPengurus: boolean;
+  /** Ketua / pengurus tanpa batas RT / super admin */
+  isFullPengurus: boolean;
   isKetua: boolean;
+  /** RT yang menjadi batas wewenang pengurus ini (null = tidak dibatasi) */
+  scopeRtUnitId: string | null;
+  /** Boleh mengelola objek milik RT tsb? (null = objek tingkat komunitas) */
+  canManageRt: (rtUnitId: string | null) => boolean;
+  /** Daftar RT di komunitas aktif (kosong untuk komunitas RT) */
+  rtUnits: RtUnit[];
+  rtLabel: (rtUnitId: string | null | undefined) => string | null;
+  reloadRtUnits: () => Promise<void>;
   setCurrent: (communityId: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -56,6 +67,26 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  const [rtUnits, setRtUnits] = useState<RtUnit[]>([]);
+  const currentCommunityId = memberships.find((m) => m.community_id === currentId)?.community_id ?? null;
+
+  const reloadRtUnits = useCallback(async () => {
+    if (!currentCommunityId) {
+      setRtUnits([]);
+      return;
+    }
+    const { data } = await supabase
+      .from('rt_units')
+      .select('*')
+      .eq('community_id', currentCommunityId)
+      .order('rt_number');
+    setRtUnits((data ?? []) as RtUnit[]);
+  }, [currentCommunityId]);
+
+  useEffect(() => {
+    reloadRtUnits();
+  }, [reloadRtUnits]);
+
   const current = useMemo(
     () =>
       memberships.find(
@@ -65,12 +96,24 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   );
 
   const isSuper = profile?.is_super_admin ?? false;
+  const isPengurus = isSuper || current?.role === 'ketua' || current?.role === 'pengurus';
+  const scopeRtUnitId = !isSuper && current?.role === 'pengurus' ? current.managed_rt_unit_id : null;
+  const isFullPengurus = isPengurus && !scopeRtUnitId;
   const value: CommunityState = {
     memberships,
     current,
     loading,
-    isPengurus: isSuper || current?.role === 'ketua' || current?.role === 'pengurus',
+    isPengurus,
+    isFullPengurus,
     isKetua: isSuper || current?.role === 'ketua',
+    scopeRtUnitId,
+    rtUnits,
+    rtLabel: (id) => {
+      const r = id ? rtUnits.find((u) => u.id === id) : null;
+      return r ? `RT ${r.rt_number}` : null;
+    },
+    reloadRtUnits,
+    canManageRt: (rt) => isFullPengurus || (isPengurus && !!rt && rt === scopeRtUnitId),
     setCurrent: async (communityId) => {
       await AsyncStorage.setItem(ACTIVE_KEY, communityId);
       setCurrentId(communityId);

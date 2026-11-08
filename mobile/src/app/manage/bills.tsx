@@ -3,6 +3,8 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useActionSheet } from '@/components/ActionSheet';
+import { useAuth } from '@/context/AuthContext';
+import { exportBillsRecapPdf } from '@/lib/pdf';
 import { Badge, Body, Card, Chips, Empty, Loading, Muted, ProgressBar, Screen, styles as ui } from '@/components/ui';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { BILL_STATUS_LABEL, addMonths, billPeriodLabel, bulanTahun, isoDate, monthStart, parseDate, rupiah } from '@/lib/format';
@@ -19,7 +21,8 @@ type Filter = 'semua' | BillStatus;
 
 export default function ManageBills() {
   const params = useLocalSearchParams<{ dueId: string; period?: string }>();
-  const { communityId } = useCurrentCommunity();
+  const { current, communityId, scopeRtUnitId, rtLabel } = useCurrentCommunity();
+  const { profile } = useAuth();
   const [month, setMonth] = useState(() => monthStart(params.period ? parseDate(params.period) : new Date()));
   const [filter, setFilter] = useState<Filter>('semua');
   const sheet = useActionSheet();
@@ -29,7 +32,7 @@ export default function ManageBills() {
     const due = must(await supabase.from('dues').select('*').eq('id', params.dueId).single()) as Due;
     let q = supabase
       .from('bills')
-      .select('*, memberships(address, profiles(full_name), rt_units(rt_number))')
+      .select('*, memberships(address, profiles(full_name), rt_units:rt_units!memberships_rt_unit_id_community_id_fkey(rt_number))')
       .eq('community_id', communityId)
       .eq('due_id', params.dueId)
       .order('period', { ascending: false });
@@ -47,6 +50,29 @@ export default function ManageBills() {
   const collected = lunas.reduce((s, b) => s + Number(b.amount), 0);
   const total = bills.reduce((s, b) => s + Number(b.amount), 0);
   const shown = filter === 'semua' ? bills : bills.filter((b) => b.status === filter);
+
+  async function exportPdf() {
+    try {
+      await exportBillsRecapPdf({
+        community: current.communities,
+        dueName: due.name,
+        periodLabel: due.frequency === 'bulanan' ? bulanTahun(month) : 'Semua periode',
+        scopeLabel: scopeRtUnitId ? `Warga ${rtLabel(scopeRtUnitId)}` : null,
+        bills: bills.map((b) => ({
+          name: b.memberships?.profiles?.full_name || 'Warga',
+          rt: b.memberships?.rt_units ? `RT ${b.memberships.rt_units.rt_number}` : null,
+          address: b.memberships?.address ?? null,
+          amount: b.amount,
+          status: b.status,
+          paid_at: b.paid_at,
+        })),
+        printedBy: profile?.full_name || 'Pengurus',
+        signers: scopeRtUnitId ? ['Bendahara', `Ketua ${rtLabel(scopeRtUnitId)}`] : undefined,
+      });
+    } catch (e) {
+      Alert.alert('Gagal membuat PDF', errorMessage(e));
+    }
+  }
 
   function actions(b: BillRow) {
     const name = b.memberships?.profiles?.full_name || 'Warga';
@@ -87,7 +113,16 @@ export default function ManageBills() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Stack.Screen options={{ title: due.name }} />
+      <Stack.Screen
+        options={{
+          title: due.name,
+          headerRight: () => (
+            <Pressable onPress={exportPdf} hitSlop={10} disabled={bills.length === 0}>
+              <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
       {due.frequency === 'bulanan' && (
         <View style={[ui.row, { justifyContent: 'space-between', marginBottom: space.md }]}>
           <Pressable onPress={() => setMonth((m) => addMonths(m, -1))} hitSlop={12}>
@@ -148,7 +183,10 @@ export default function ManageBills() {
           ))}
         </Card>
       )}
-      <Muted style={{ textAlign: 'center' }}>Ketuk warga untuk mencatat pembayaran tunai.</Muted>
+      <Muted style={{ textAlign: 'center' }}>
+        Ketuk warga untuk mencatat pembayaran tunai. Ikon dokumen di kanan atas untuk export PDF.
+        {scopeRtUnitId ? ` Hanya menampilkan warga ${rtLabel(scopeRtUnitId)}.` : ''}
+      </Muted>
     </Screen>
   );
 }

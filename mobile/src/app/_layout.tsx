@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActionSheetProvider } from '@/components/ActionSheet';
+import { PushHandler } from '@/components/PushHandler';
 import { Loading } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { CommunityProvider, useCommunity } from '@/context/CommunityContext';
@@ -45,6 +46,7 @@ function RootNavigator() {
         <Stack.Screen name="create-community" options={{ title: 'Buat Komunitas' }} />
         <Stack.Screen name="join-community" options={{ title: 'Gabung Komunitas' }} />
         <Stack.Screen name="profile" options={{ title: 'Profil Saya' }} />
+        <Stack.Screen name="notifications" options={{ title: 'Notifikasi' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn && isAdmin}>
@@ -89,6 +91,7 @@ export default function RootLayout() {
           <CommunityProvider>
             <ActionSheetProvider>
               <RootNavigator />
+              <PushHandler />
             </ActionSheetProvider>
           </CommunityProvider>
         </AuthProvider>

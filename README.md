@@ -10,6 +10,7 @@ Aplikasi Android & iOS untuk pengelolaan **iuran wajib & sukarela**, **laporan k
 ```
 mobile/                 Aplikasi Expo (Android & iOS dari satu kode)
 supabase/migrations/    Skema database, RLS, trigger, fungsi RPC
+supabase/functions/     Edge Function pengirim push notification
 supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 ```
 
@@ -20,7 +21,9 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Melihat tagihan iuran wajib dan membayar dengan unggah bukti transfer/QRIS, atau tunai
 - Ikut menyumbang ke iuran sukarela (donasi) dengan progres target dana
 - Melihat **laporan kas** bulanan/tahunan (saldo awal, pemasukan, pengeluaran, per kategori) agar transparan
-- Membaca berita & pengumuman
+- Membaca berita & pengumuman (termasuk pengumuman khusus RT-nya)
+- **Notifikasi** (push ke HP + kotak masuk di aplikasi): tagihan baru, pembayaran diterima/ditolak, berita baru, permintaan bergabung disetujui
+- **Export PDF** laporan kas untuk dibagikan ke grup WhatsApp atau dicetak
 - Satu akun bisa ikut beberapa komunitas dan berpindah di tab Akun
 
 **Pengurus** (ketua + pengurus lain seperti bendahara, sekretaris, ketua RT di dalam RW)
@@ -31,10 +34,12 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Mencatat pembayaran tunai langsung
 - Mencatat pengeluaran dan pemasukan lain di buku kas
 - Menulis, menyematkan, dan menghapus berita bergambar
+- Notifikasi saat ada pembayaran yang perlu diverifikasi atau warga yang ingin bergabung
+- **Export PDF** rekap tagihan per iuran/bulan (lengkap dengan kolom tanda tangan)
 
 **Ketua** (Ketua RW untuk komunitas RW, Ketua RT untuk komunitas RT)
 - Semua hak pengurus, ditambah:
-- Mengangkat/menurunkan pengurus dan menentukan jabatannya
+- Mengangkat/menurunkan pengurus, menentukan jabatannya, dan (di komunitas RW) **membatasi wewenangnya ke satu RT**
 - **Serah terima jabatan ketua** (ketua lama otomatis menjadi pengurus)
 - Mengubah data komunitas, info rekening, daftar RT, dan mengganti kode undangan
 
@@ -42,6 +47,21 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Melihat semua komunitas beserta jumlah anggota, ketua, dan saldonya
 - Menonaktifkan/mengaktifkan komunitas
 - Dapat membaca data di semua komunitas untuk keperluan dukungan
+
+## Wewenang per RT (komunitas RW)
+
+Di komunitas RW, Ketua RW bisa mengangkat pengurus yang wewenangnya **dibatasi ke satu RT**. Jabatan "Ketua RT xx" otomatis dibatasi ke RT-nya, sedangkan Bendahara, Sekretaris, dan Pengurus bisa dipilih "Seluruh RW" atau "Hanya RT xx". Pengurus RT hanya bisa:
+
+- Melihat dan menyetujui pendaftar dari RT-nya
+- Melihat tagihan dan pembayaran warga RT-nya, memverifikasi, dan mencatat pembayaran tunai
+- Membuat iuran khusus RT-nya, yang masuk ke **kas RT**
+- Membuat tagihan iuran RW untuk warga RT-nya saja (uangnya tetap masuk kas RW)
+- Mencatat transaksi di kas RT-nya
+- Menulis pengumuman khusus RT, yang hanya terlihat oleh warga RT tersebut dan pengurusnya
+
+Pengurus RT tidak bisa mengubah iuran/kas/berita tingkat RW, mengubah data komunitas atau daftar RT, memindahkan warga antar RT, maupun melihat data RT lain. Laporan kas bisa ditampilkan untuk semua kas, kas RW saja, atau kas satu RT, dan bisa dilihat semua warga demi transparansi.
+
+Semua batasan ini juga dipaksakan di database (RLS & RPC), tidak hanya disembunyikan di aplikasi.
 
 ## Keamanan & pemisahan data
 
@@ -60,7 +80,7 @@ Peran per komunitas:
 |---|:-:|:-:|:-:|:-:|
 | Lihat berita, kas, iuran | ✓ | ✓ | ✓ | ✓ (semua) |
 | Bayar / kirim bukti | ✓ | ✓ | ✓ | |
-| Approve warga, kelola iuran/tagihan, verifikasi, kas, berita | | ✓ | ✓ | ✓ |
+| Approve warga, kelola iuran/tagihan, verifikasi, kas, berita | | ✓ (pengurus RT: hanya RT-nya) | ✓ | ✓ |
 | Atur pengurus, serah terima ketua, edit komunitas | | | ✓ | ✓ |
 | Nonaktifkan komunitas | | | | ✓ |
 
@@ -90,7 +110,27 @@ npx expo start            # scan QR dengan aplikasi Expo Go (Android/iOS)
 
 Nilai URL dan anon/publishable key ada di Supabase Dashboard → Project Settings → API.
 
-### 3. Build & rilis (EAS)
+### 3. Push notification
+
+Notifikasi selalu tersimpan di kotak masuk aplikasi (ikon lonceng di Beranda). Agar juga muncul sebagai push di HP:
+
+1. **Hubungkan ke EAS**: `cd mobile && npx eas-cli@latest init`. Perintah ini menulis `extra.eas.projectId` ke `app.json`, yang dibutuhkan untuk mendapatkan push token.
+2. **Kredensial**: untuk Android, unggah kunci FCM V1 (Firebase) lewat `npx eas-cli@latest credentials`. Untuk iOS, kunci APNs dibuat otomatis saat `eas build`.
+3. **Development build**: push **tidak didukung di Expo Go** (Android). Uji dengan `npx eas-cli@latest build --profile development`.
+4. **Edge Function** (butuh [Supabase CLI](https://supabase.com/docs/guides/cli)):
+   ```bash
+   supabase link --project-ref <ref>
+   supabase secrets set PUSH_WEBHOOK_SECRET=<string-acak-panjang>
+   supabase functions deploy push --no-verify-jwt
+   ```
+5. **Database Webhook**: buka Dashboard → Database → Webhooks → *Create a new hook*:
+   - Table `notifications`, event **Insert**
+   - Type **HTTP Request**, method `POST`, URL `https://<ref>.supabase.co/functions/v1/push`
+   - HTTP header `x-webhook-secret: <string-acak-panjang>` (sama dengan langkah 4)
+
+Cara kerjanya: trigger database menulis baris ke `notifications` (satu baris per penerima). Webhook lalu memanggil Edge Function, yang mengklaim antrean secara atomik (`claim_push_batch`) dan mengirimnya ke Expo Push API dalam batch berisi 100 pesan. Token perangkat yang sudah tidak terdaftar otomatis dihapus. Kalau "Enhanced push security" aktif di akun Expo, set juga secret `EXPO_ACCESS_TOKEN`.
+
+### 4. Build & rilis (EAS)
 
 ```bash
 cd mobile
@@ -104,7 +144,7 @@ Sebelum rilis, ganti `ios.bundleIdentifier` / `android.package` di `mobile/app.j
 
 ## Tes
 
-Tes database menjalankan 44 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas, perubahan peran, serah terima ketua, panel admin, dan **isolasi data antar komunitas**.
+Tes database menjalankan 90 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), dan antrean push (tidak terkirim dua kali).
 
 ```bash
 DATABASE_URL=postgres://postgres@localhost:5432/kask_test ./supabase/tests/run_local.sh
@@ -130,8 +170,7 @@ cd mobile && npm run typecheck
 
 ## Ide pengembangan berikutnya
 
-- Push notification (tagihan baru, pembayaran diverifikasi, berita baru) via `expo-notifications`
-- Ekspor laporan kas ke PDF/Excel
 - Pembayaran otomatis via payment gateway (Midtrans/Xendit), dengan webhook menandai lunas
-- Pengurus RT di dalam RW hanya mengelola warga RT-nya sendiri
-- Pengingat jatuh tempo otomatis (cron Supabase + Edge Function)
+- Pengingat jatuh tempo otomatis (pg_cron yang menulis ke `notifications`)
+- Export Excel
+- Pengaturan notifikasi per jenis (mis. matikan notifikasi berita)

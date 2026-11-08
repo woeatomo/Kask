@@ -47,6 +47,8 @@ export interface Membership {
   position: string | null;
   status: MemberStatus;
   rt_unit_id: string | null;
+  /** Pengurus yang wewenangnya dibatasi ke satu RT (komunitas RW) */
+  managed_rt_unit_id: string | null;
   address: string | null;
   joined_at: string;
 }
@@ -112,6 +114,8 @@ export interface CashTransaction {
   description: string | null;
   trx_date: string;
   payment_id: string | null;
+  /** null = kas RW / kas utama */
+  rt_unit_id: string | null;
   attachment_path: string | null;
   created_at: string;
 }
@@ -122,6 +126,8 @@ export interface News {
   title: string;
   body: string;
   image_path: string | null;
+  /** null = untuk seluruh komunitas */
+  rt_unit_id: string | null;
   is_pinned: boolean;
   author_id: string | null;
   published_at: string;
@@ -134,4 +140,15 @@ export interface CashReport {
   expense: number;
   closing_balance: number;
   by_category: { type: CashType; category: string; total: number }[];
+}
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  community_id: string | null;
+  title: string;
+  body: string;
+  url: string | null;
+  created_at: string;
+  read_at: string | null;
 }

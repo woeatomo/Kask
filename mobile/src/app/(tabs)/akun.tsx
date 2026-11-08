@@ -10,7 +10,7 @@ import { colors, space } from '@/lib/theme';
 
 export default function Akun() {
   const { profile, session, signOut } = useAuth();
-  const { current, memberships, isPengurus, setCurrent, refresh } = useCurrentCommunity();
+  const { current, memberships, isPengurus, setCurrent, refresh, scopeRtUnitId, rtLabel } = useCurrentCommunity();
   const others = memberships.filter((m) => m.community_id !== current.community_id);
   const c = current.communities;
 
@@ -59,6 +59,7 @@ export default function Akun() {
         <View style={[ui.row, { gap: space.sm, marginTop: space.sm }]}>
           <Badge text={ROLE_LABEL[current.role]} tone={current.role === 'warga' ? 'neutral' : 'info'} />
           {current.position ? <Badge text={current.position} tone="neutral" /> : null}
+          {scopeRtUnitId ? <Badge text={`Wewenang ${rtLabel(scopeRtUnitId)}`} tone="warning" /> : null}
         </View>
         {c.bank_info ? (
           <>
@@ -104,6 +105,7 @@ export default function Akun() {
       )}
 
       <Card style={{ paddingVertical: space.xs }}>
+        <ListItem icon="notifications-outline" title="Notifikasi" onPress={() => router.push('/notifications')} />
         <ListItem icon="enter-outline" title="Gabung komunitas lain" onPress={() => router.push('/join-community')} />
         <ListItem icon="add-circle-outline" title="Buat komunitas baru" onPress={() => router.push('/create-community')} />
         {profile?.is_super_admin && (

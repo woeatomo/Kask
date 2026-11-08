@@ -41,3 +41,10 @@ grant execute on function storage.foldername(text) to authenticated;
 -- Supabase memberi grant default ke anon/authenticated untuk objek baru di public
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant all on functions to anon, authenticated;
+
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
+end $$;
+grant usage on schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on functions to service_role;

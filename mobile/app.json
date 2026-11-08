@@ -29,7 +29,15 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Kask memerlukan akses galeri untuk mengunggah bukti pembayaran dan gambar berita."
+          "photosPermission": "Kask memerlukan akses galeri untuk mengunggah bukti pembayaran dan gambar berita.",
+          "microphonePermission": false,
+          "cameraPermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0F766E"
         }
       ]
     ],

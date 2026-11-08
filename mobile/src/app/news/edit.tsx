@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Image, Switch, View } from 'react-native';
-import { Body, Button, Input, Screen, styles as ui } from '@/components/ui';
+import { Body, Button, Chips, Input, Muted, Screen, styles as ui } from '@/components/ui';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { pickImage, signedUrl, uploadImage, type PickedImage } from '@/lib/storage';
 import { errorMessage, supabase } from '@/lib/supabase';
@@ -10,7 +10,12 @@ import type { News } from '@/lib/types';
 
 export default function NewsEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { communityId } = useCurrentCommunity();
+  const { communityId, rtUnits, canManageRt, scopeRtUnitId } = useCurrentCommunity();
+  const [rtUnit, setRtUnit] = useState(scopeRtUnitId ?? '');
+  const targetOptions = [
+    ...(canManageRt(null) ? [{ value: '', label: 'Semua warga' }] : []),
+    ...rtUnits.filter((r) => canManageRt(r.id)).map((r) => ({ value: r.id, label: `Khusus RT ${r.rt_number}` })),
+  ];
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [pinned, setPinned] = useState(false);
@@ -32,6 +37,7 @@ export default function NewsEdit() {
         setTitle(n.title);
         setBody(n.body);
         setPinned(n.is_pinned);
+        setRtUnit(n.rt_unit_id ?? '');
         setImagePath(n.image_path);
         setPreview(await signedUrl('news-images', n.image_path));
       });
@@ -55,7 +61,7 @@ export default function NewsEdit() {
     try {
       let path = imagePath;
       if (picked) path = await uploadImage('news-images', communityId, picked);
-      const row = { title: title.trim(), body: body.trim(), is_pinned: pinned, image_path: path };
+      const row = { title: title.trim(), body: body.trim(), is_pinned: pinned, image_path: path, rt_unit_id: rtUnit || null };
       const { error } = id
         ? await supabase.from('news').update(row).eq('id', id)
         : await supabase.from('news').insert({ ...row, community_id: communityId });
@@ -73,6 +79,12 @@ export default function NewsEdit() {
 
   return (
     <Screen>
+      {rtUnits.length > 0 && (
+        <>
+          <Muted style={{ marginBottom: space.sm }}>Ditujukan untuk</Muted>
+          <Chips value={rtUnit} onChange={setRtUnit} options={targetOptions} />
+        </>
+      )}
       <Input label="Judul" value={title} onChangeText={setTitle} placeholder="mis. Kerja bakti Minggu ini" />
       <Input label="Isi" value={body} onChangeText={setBody} multiline placeholder="Tulis pengumuman..." />
       {preview && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { Body, Button, Card, Input, ListItem, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useCurrentCommunity } from '@/context/CommunityContext';
@@ -7,7 +7,7 @@ import { colors, space } from '@/lib/theme';
 import type { RtUnit } from '@/lib/types';
 
 export default function CommunitySettings() {
-  const { current, communityId, isKetua, refresh } = useCurrentCommunity();
+  const { current, communityId, isKetua, isFullPengurus, refresh, rtUnits, reloadRtUnits } = useCurrentCommunity();
   const c = current.communities;
   const [name, setName] = useState(c.name);
   const [kelurahan, setKelurahan] = useState(c.kelurahan ?? '');
@@ -17,17 +17,9 @@ export default function CommunitySettings() {
   const [address, setAddress] = useState(c.address ?? '');
   const [bankInfo, setBankInfo] = useState(c.bank_info ?? '');
   const [saving, setSaving] = useState(false);
-  const [rtUnits, setRtUnits] = useState<RtUnit[]>([]);
   const [newRt, setNewRt] = useState('');
 
-  const loadRt = useCallback(async () => {
-    const { data } = await supabase.from('rt_units').select('*').eq('community_id', communityId).order('rt_number');
-    setRtUnits((data ?? []) as RtUnit[]);
-  }, [communityId]);
-
-  useEffect(() => {
-    if (c.type === 'RW') loadRt();
-  }, [c.type, loadRt]);
+  const loadRt = reloadRtUnits;
 
   async function save() {
     if (!name.trim()) return Alert.alert('Nama wajib diisi');
@@ -60,7 +52,8 @@ export default function CommunitySettings() {
   }
 
   function removeRt(r: RtUnit) {
-    Alert.alert(`Hapus RT ${r.rt_number}?`, 'Warga di RT ini tidak terhapus, hanya pengelompokannya.', [
+    if (!isFullPengurus) return;
+    Alert.alert(`Hapus RT ${r.rt_number}?`, 'Warga di RT ini tidak terhapus, hanya pengelompokannya. RT yang sudah punya transaksi kas tidak bisa dihapus.', [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Hapus',
@@ -123,15 +116,24 @@ export default function CommunitySettings() {
           <Card style={{ paddingVertical: space.xs }}>
             {rtUnits.length === 0 && <Muted style={{ paddingVertical: space.md }}>Belum ada RT. Tambahkan agar warga bisa memilih RT saat bergabung.</Muted>}
             {rtUnits.map((r) => (
-              <ListItem key={r.id} icon="home-outline" title={`RT ${r.rt_number}`} subtitle={r.name ?? undefined} onPress={() => removeRt(r)} right={<Muted>Hapus</Muted>} />
+              <ListItem
+                key={r.id}
+                icon="home-outline"
+                title={`RT ${r.rt_number}`}
+                subtitle={r.name ?? undefined}
+                onPress={isFullPengurus ? () => removeRt(r) : undefined}
+                right={isFullPengurus ? <Muted>Hapus</Muted> : <View />}
+              />
             ))}
           </Card>
-          <View style={[ui.row, { gap: space.sm, alignItems: 'flex-start' }]}>
-            <View style={{ flex: 1 }}>
-              <Input label="Nomor RT baru" value={newRt} onChangeText={setNewRt} keyboardType="number-pad" placeholder="01" />
+          {isFullPengurus && (
+            <View style={[ui.row, { gap: space.sm, alignItems: 'flex-start' }]}>
+              <View style={{ flex: 1 }}>
+                <Input label="Nomor RT baru" value={newRt} onChangeText={setNewRt} keyboardType="number-pad" placeholder="01" />
+              </View>
+              <Button title="Tambah" onPress={addRt} style={{ marginTop: 22 }} />
             </View>
-            <Button title="Tambah" onPress={addRt} style={{ marginTop: 22 }} />
-          </View>
+          )}
         </>
       )}
     </Screen>

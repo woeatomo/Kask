@@ -1,45 +1,85 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Body, Card, Empty, Fab, Loading, Muted, Screen, SectionTitle, Segmented, styles as ui } from '@/components/ui';
+import { Alert, Pressable, Text, View } from 'react-native';
+import { Badge, Body, Button, Card, Chips, Empty, Fab, Loading, Muted, Screen, SectionTitle, Segmented, styles as ui } from '@/components/ui';
+import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { addMonths, bulanTahun, isoDate, monthEnd, monthStart, rupiah, tanggal } from '@/lib/format';
-import { supabase } from '@/lib/supabase';
+import { exportCashReportPdf } from '@/lib/pdf';
+import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 import type { CashReport, CashTransaction } from '@/lib/types';
 import { must, useData } from '@/lib/useData';
 
 type Range = 'bulan' | 'tahun';
+/** '' = semua kas, 'rw' = kas RW saja, selain itu id RT */
+type KasFilter = string;
 
 export default function Kas() {
-  const { communityId, isPengurus } = useCurrentCommunity();
+  const { profile } = useAuth();
+  const { current, communityId, isPengurus, canManageRt, rtUnits, rtLabel, scopeRtUnitId } = useCurrentCommunity();
   const [range, setRange] = useState<Range>('bulan');
   const [anchor, setAnchor] = useState(() => monthStart(new Date()));
+  const [kas, setKas] = useState<KasFilter>(scopeRtUnitId ?? '');
+  const [exporting, setExporting] = useState(false);
+  const isRW = current.communities.type === 'RW' && rtUnits.length > 0;
 
   const from = range === 'bulan' ? anchor : new Date(anchor.getFullYear(), 0, 1);
   const to = range === 'bulan' ? monthEnd(anchor) : new Date(anchor.getFullYear(), 11, 31);
   const fromStr = isoDate(from);
   const toStr = isoDate(to);
+  const periodLabel = range === 'bulan' ? bulanTahun(anchor) : `Tahun ${anchor.getFullYear()}`;
+  const kasLabel = !isRW ? 'Kas' : kas === '' ? 'Semua kas (RW + RT)' : kas === 'rw' ? 'Kas RW' : `Kas ${rtLabel(kas)}`;
 
   const load = useCallback(async () => {
+    let q = supabase
+      .from('cash_transactions')
+      .select('*')
+      .eq('community_id', communityId)
+      .gte('trx_date', fromStr)
+      .lte('trx_date', toStr)
+      .order('trx_date', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (kas === 'rw') q = q.is('rt_unit_id', null);
+    else if (kas) q = q.eq('rt_unit_id', kas);
     const [report, trx] = await Promise.all([
-      supabase.rpc('cash_report', { p_community_id: communityId, p_from: fromStr, p_to: toStr }),
-      supabase
-        .from('cash_transactions')
-        .select('*')
-        .eq('community_id', communityId)
-        .gte('trx_date', fromStr)
-        .lte('trx_date', toStr)
-        .order('trx_date', { ascending: false })
-        .order('created_at', { ascending: false }),
+      supabase.rpc('cash_report', {
+        p_community_id: communityId,
+        p_from: fromStr,
+        p_to: toStr,
+        p_only_rw: kas === 'rw',
+        p_rt_unit_id: kas && kas !== 'rw' ? kas : null,
+      }),
+      q,
     ]);
     return { report: must(report) as CashReport, trx: (must(trx) ?? []) as CashTransaction[] };
-  }, [communityId, fromStr, toStr]);
+  }, [communityId, fromStr, toStr, kas]);
 
   const { data, loading, refreshing, refresh } = useData<{ report: CashReport; trx: CashTransaction[] } | null>(load, null);
 
   const step = (n: number) => setAnchor((a) => (range === 'bulan' ? addMonths(a, n) : new Date(a.getFullYear() + n, 0, 1)));
+
+  async function exportPdf() {
+    if (!data) return;
+    setExporting(true);
+    try {
+      await exportCashReportPdf({
+        community: current.communities,
+        periodLabel,
+        kasLabel,
+        report: data.report,
+        transactions: data.trx,
+        rtLabel,
+        printedBy: profile?.full_name || 'Pengguna',
+        signers: isRW && kas && kas !== 'rw' ? [`Bendahara ${rtLabel(kas)}`, `Ketua ${rtLabel(kas)}`] : undefined,
+      });
+    } catch (e) {
+      Alert.alert('Gagal membuat PDF', errorMessage(e));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Screen
@@ -55,13 +95,22 @@ export default function Kas() {
           { value: 'tahun', label: 'Tahunan' },
         ]}
       />
+      {isRW && (
+        <Chips
+          value={kas}
+          onChange={setKas}
+          options={[
+            { value: '', label: 'Semua kas' },
+            { value: 'rw', label: 'Kas RW' },
+            ...rtUnits.map((r) => ({ value: r.id, label: `Kas RT ${r.rt_number}` })),
+          ]}
+        />
+      )}
       <View style={[ui.row, { justifyContent: 'space-between', marginBottom: space.md }]}>
         <Pressable onPress={() => step(-1)} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </Pressable>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
-          {range === 'bulan' ? bulanTahun(anchor) : `Tahun ${anchor.getFullYear()}`}
-        </Text>
+        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{periodLabel}</Text>
         <Pressable onPress={() => step(1)} hitSlop={12}>
           <Ionicons name="chevron-forward" size={24} color={colors.primary} />
         </Pressable>
@@ -78,6 +127,14 @@ export default function Kas() {
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: space.sm }} />
             <Row label="Saldo akhir" value={data.report.closing_balance} bold />
           </Card>
+          <Button
+            title="Export PDF"
+            icon="document-text-outline"
+            variant="secondary"
+            loading={exporting}
+            onPress={exportPdf}
+            style={{ marginBottom: space.sm }}
+          />
 
           {data.report.by_category.length > 0 && (
             <>
@@ -102,7 +159,7 @@ export default function Kas() {
           ) : (
             <Card style={{ paddingVertical: space.sm }}>
               {data.trx.map((t) => {
-                const editable = isPengurus && !t.payment_id;
+                const editable = !t.payment_id && canManageRt(t.rt_unit_id);
                 return (
                   <Pressable
                     key={t.id}
@@ -120,6 +177,11 @@ export default function Kas() {
                       <Muted>
                         {tanggal(t.trx_date)} · {t.category}
                       </Muted>
+                      {isRW && kas === '' ? (
+                        <View style={{ marginTop: 2 }}>
+                          <Badge text={t.rt_unit_id ? `Kas ${rtLabel(t.rt_unit_id)}` : 'Kas RW'} />
+                        </View>
+                      ) : null}
                     </View>
                     <Body style={{ fontWeight: '700', color: t.type === 'masuk' ? colors.success : colors.danger }}>
                       {t.type === 'masuk' ? '+' : '−'}
@@ -131,7 +193,8 @@ export default function Kas() {
             </Card>
           )}
           <Muted style={{ textAlign: 'center', marginTop: space.sm }}>
-            Pemasukan iuran tercatat otomatis saat pembayaran diverifikasi.
+            Pemasukan iuran tercatat otomatis saat pembayaran diverifikasi
+            {isRW ? ', masuk ke kas RT jika iurannya khusus RT' : ''}.
           </Muted>
         </>
       )}

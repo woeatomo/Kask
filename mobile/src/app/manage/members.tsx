@@ -6,35 +6,32 @@ import { useCommunity, useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, tanggal } from '@/lib/format';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { space } from '@/lib/theme';
-import type { MemberRole, MemberRow, RtUnit } from '@/lib/types';
+import type { MemberRole, MemberRow } from '@/lib/types';
 import { must, useData } from '@/lib/useData';
 
 const ROLE_ORDER: Record<MemberRole, number> = { ketua: 0, pengurus: 1, warga: 2 };
 
 export default function Members() {
-  const { communityId, current, isKetua } = useCurrentCommunity();
+  const { communityId, current, isKetua, rtUnits, rtLabel, canManageRt, scopeRtUnitId } = useCurrentCommunity();
   const { refresh: refreshCommunity } = useCommunity();
-  const [rtFilter, setRtFilter] = useState('');
+  const [rtFilter, setRtFilter] = useState(scopeRtUnitId ?? '');
   const sheet = useActionSheet();
 
   const load = useCallback(async () => {
-    const [m, r] = await Promise.all([
-      supabase
-        .from('memberships')
-        .select('*, profiles(full_name, phone), rt_units(rt_number)')
-        .eq('community_id', communityId)
-        .in('status', ['active', 'pending']),
-      supabase.from('rt_units').select('*').eq('community_id', communityId).order('rt_number'),
-    ]);
+    const m = await supabase
+      .from('memberships')
+      .select('*, profiles(full_name, phone), rt_units:rt_units!memberships_rt_unit_id_community_id_fkey(rt_number)')
+      .eq('community_id', communityId)
+      .in('status', ['active', 'pending']);
     const members = ((must(m) ?? []) as MemberRow[]).sort(
       (a, b) =>
         ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
         (a.profiles?.full_name ?? '').localeCompare(b.profiles?.full_name ?? ''),
     );
-    return { members, rtUnits: (must(r) ?? []) as RtUnit[] };
+    return { members };
   }, [communityId]);
 
-  const { data, loading, refreshing, refresh, reload } = useData<{ members: MemberRow[]; rtUnits: RtUnit[] } | null>(load, null);
+  const { data, loading, refreshing, refresh, reload } = useData<{ members: MemberRow[] } | null>(load, null);
   if (loading || !data) return <Loading />;
 
   const pending = data.members.filter((m) => m.status === 'pending');
@@ -52,23 +49,40 @@ export default function Members() {
     return true;
   }
 
-  function choosePosition(m: MemberRow) {
-    const positions = ['Bendahara', 'Sekretaris', ...(current.communities.type === 'RW' ? data!.rtUnits.map((r) => `Ketua RT ${r.rt_number}`) : []), 'Pengurus'];
+  function setPengurus(m: MemberRow, position: string, scope: string | null) {
+    rpc('set_member_role', { p_membership_id: m.id, p_role: 'pengurus', p_position: position, p_managed_rt_unit_id: scope });
+  }
+
+  /** Di komunitas RW: tentukan apakah wewenang pengurus ini seluruh RW atau satu RT */
+  function chooseScope(m: MemberRow, position: string) {
+    if (rtUnits.length === 0) return setPengurus(m, position, null);
     sheet({
-      title: 'Pilih jabatan',
-      message: m.profiles?.full_name ?? '',
-      options: positions.map((p) => ({
-        label: p,
-        onPress: () => rpc('set_member_role', { p_membership_id: m.id, p_role: 'pengurus', p_position: p }),
-      })),
+      title: 'Batas wewenang',
+      message: `${position}: berwenang atas warga mana?`,
+      options: [
+        { label: 'Seluruh RW (tanpa batas)', onPress: () => setPengurus(m, position, null) },
+        ...rtUnits.map((r) => ({ label: `Hanya RT ${r.rt_number}`, onPress: () => setPengurus(m, position, r.id) })),
+      ],
     });
+  }
+
+  function choosePosition(m: MemberRow) {
+    const options: SheetOption[] = [
+      ...rtUnits.map((r) => ({
+        label: `Ketua RT ${r.rt_number}`,
+        // ketua RT otomatis dibatasi ke RT-nya
+        onPress: () => setPengurus(m, `Ketua RT ${r.rt_number}`, r.id),
+      })),
+      ...['Bendahara', 'Sekretaris', 'Pengurus'].map((p) => ({ label: p, onPress: () => chooseScope(m, p) })),
+    ];
+    sheet({ title: 'Pilih jabatan', message: m.profiles?.full_name ?? '', options });
   }
 
   function chooseRt(m: MemberRow) {
     sheet({
       title: 'Pindah RT',
       message: m.profiles?.full_name ?? '',
-      options: data!.rtUnits.map((r) => ({
+      options: rtUnits.map((r) => ({
         label: `RT ${r.rt_number}`,
         onPress: () => rpc('update_member_info', { p_membership_id: m.id, p_rt_unit_id: r.id, p_address: m.address }),
       })),
@@ -99,8 +113,9 @@ export default function Members() {
           ]),
       });
     }
-    if (data!.rtUnits.length > 0) buttons.push({ label: 'Pindah RT', onPress: () => chooseRt(m) });
-    if (!isSelf && m.role !== 'ketua' && (isKetua || m.role === 'warga')) {
+    // memindahkan antar RT hanya oleh pengurus tingkat RW
+    if (rtUnits.length > 0 && canManageRt(null)) buttons.push({ label: 'Pindah RT', onPress: () => chooseRt(m) });
+    if (!isSelf && m.role !== 'ketua' && (isKetua || (m.role === 'warga' && canManageRt(m.rt_unit_id)))) {
       buttons.push({
         label: 'Keluarkan',
         destructive: true,
@@ -120,7 +135,14 @@ export default function Members() {
       key={m.id}
       icon={m.role === 'ketua' ? 'star' : m.role === 'pengurus' ? 'ribbon-outline' : 'person-outline'}
       title={m.profiles?.full_name || 'Tanpa nama'}
-      subtitle={[m.position, m.rt_units ? `RT ${m.rt_units.rt_number}` : null, m.address].filter(Boolean).join(' · ')}
+      subtitle={[
+        m.position,
+        m.managed_rt_unit_id ? `wewenang ${rtLabel(m.managed_rt_unit_id)}` : null,
+        m.rt_units ? `RT ${m.rt_units.rt_number}` : null,
+        m.address,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
       right={m.role !== 'warga' ? <Badge text={ROLE_LABEL[m.role]} tone="info" /> : undefined}
       onPress={() => actions(m)}
     />
@@ -151,11 +173,11 @@ export default function Members() {
       <Card style={{ paddingVertical: space.xs }}>{pengurus.map(memberItem)}</Card>
 
       <SectionTitle>Warga ({warga.length})</SectionTitle>
-      {data.rtUnits.length > 0 && (
+      {rtUnits.length > 0 && (
         <Chips
           value={rtFilter}
           onChange={setRtFilter}
-          options={[{ value: '', label: 'Semua RT' }, ...data.rtUnits.map((r) => ({ value: r.id, label: `RT ${r.rt_number}` }))]}
+          options={[{ value: '', label: 'Semua RT' }, ...rtUnits.map((r) => ({ value: r.id, label: `RT ${r.rt_number}` }))]}
         />
       )}
       {warga.length === 0 ? (
@@ -164,7 +186,8 @@ export default function Members() {
         <Card style={{ paddingVertical: space.xs }}>{warga.map(memberItem)}</Card>
       )}
       <Muted style={{ textAlign: 'center' }}>
-        {isKetua ? 'Ketuk anggota untuk mengatur jabatan.' : 'Hanya ketua yang dapat mengatur jabatan pengurus.'}
+        {isKetua ? 'Ketuk anggota untuk mengatur jabatan dan batas wewenang.' : 'Hanya ketua yang dapat mengatur jabatan pengurus.'}
+        {scopeRtUnitId ? ` Wewenang Anda: ${rtLabel(scopeRtUnitId)}.` : ''}
       </Muted>
     </Screen>
   );

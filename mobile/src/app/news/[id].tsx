@@ -12,7 +12,7 @@ import { must, useData } from '@/lib/useData';
 
 export default function NewsDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isPengurus } = useCurrentCommunity();
+  const { canManageRt, rtLabel } = useCurrentCommunity();
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
@@ -49,6 +49,7 @@ export default function NewsDetail() {
       <Stack.Screen options={{ title: 'Berita' }} />
       <Title>{n.title}</Title>
       <Muted style={{ marginBottom: space.md }}>
+        {n.rt_unit_id ? `Khusus ${rtLabel(n.rt_unit_id) ?? 'RT'} · ` : ''}
         {tanggal(n.published_at)}
         {n.profiles?.full_name ? ` · ${n.profiles.full_name}` : ''}
       </Muted>
@@ -60,7 +61,7 @@ export default function NewsDetail() {
         />
       )}
       <Body style={{ lineHeight: 22 }}>{n.body}</Body>
-      {isPengurus && (
+      {canManageRt(n.rt_unit_id) && (
         <View style={[ui.row, { gap: space.sm, marginTop: space.xl }]}>
           <Button title="Edit" icon="create-outline" variant="secondary" small onPress={() => router.push({ pathname: '/news/edit', params: { id: n.id } })} />
           <Button title="Hapus" icon="trash-outline" variant="danger" small loading={deleting} onPress={remove} />
