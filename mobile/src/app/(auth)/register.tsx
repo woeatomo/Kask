@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input, Muted, Title } from '@/components/ui';
+import { EMAIL_CONFIRMED_URL } from '@/lib/appInfo';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 
@@ -21,7 +22,10 @@ export default function Register() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim(), phone: phone.trim() || null } },
+      options: {
+        data: { full_name: fullName.trim(), phone: phone.trim() || null },
+        emailRedirectTo: EMAIL_CONFIRMED_URL,
+      },
     });
     setLoading(false);
     if (error) return Alert.alert('Gagal daftar', errorMessage(error));

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input, Muted, styles as ui } from '@/components/ui';
+import { PASSWORD_RESET_URL } from '@/lib/appInfo';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 
@@ -21,7 +22,7 @@ export default function Login() {
 
   async function forgot() {
     if (!email) return Alert.alert('Isi email terlebih dahulu');
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: PASSWORD_RESET_URL });
     Alert.alert(error ? 'Gagal' : 'Terkirim', error ? errorMessage(error) : 'Cek email untuk reset password.');
   }
 

@@ -14,6 +14,9 @@ supabase/functions/     Edge Function pengirim push notification
 supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 ```
 
+
+> 🚀 **Mau deploy sampai live di Play Store & App Store?** Ikuti [PANDUAN-DEPLOY.md](PANDUAN-DEPLOY.md) langkah demi langkah.
+
 ## Fitur
 
 **Warga**
@@ -75,9 +78,9 @@ Langganan berlaku **per komunitas**: ketua yang berlangganan, dan semua anggotan
 - Isinya ditulis sekali di `mobile/src/content/legal.ts`. Kebijakan Privasi disusun mengacu UU No. 27/2022 tentang Pelindungan Data Pribadi.
 - **Halaman publik** (wajib untuk Play Console & App Store Connect): jalankan
   ```bash
-  cd mobile && DEVELOPER_NAME="Nama Anda" SUPPORT_EMAIL="dukungan@domain.com" npm run legal:html
+  cd mobile && npm run site:build   # membaca nama, email, dan URL Supabase dari mobile/.env
   ```
-  lalu publikasikan folder `docs/`, misalnya lewat GitHub Pages (Settings → Pages → branch, folder `/docs`). Gunakan URL `…/privacy-policy.html` sebagai Privacy Policy URL, dan `…/index.html` sebagai URL penghapusan akun di Play Console.
+  Perintah ini juga membuat halaman `konfirmasi-email.html` dan `reset-password.html` (tujuan tautan email Supabase). Lalu publikasikan folder `docs/`, misalnya lewat GitHub Pages (Settings → Pages → branch, folder `/docs`). Gunakan URL `…/privacy-policy.html` sebagai Privacy Policy URL, dan `…/index.html` sebagai URL penghapusan akun di Play Console.
 - Isi juga `EXPO_PUBLIC_DEVELOPER_NAME` dan `EXPO_PUBLIC_SUPPORT_EMAIL` di `.env` / EAS agar versi di aplikasi tidak menampilkan placeholder.
 - **Hapus akun** (wajib App Store & Google Play): Akun → Hapus akun. Login dihapus, profil dianonimkan ("Akun dihapus"), HP/alamat/token/notifikasi dihapus, keanggotaan dinonaktifkan. Catatan tagihan, pembayaran, dan kas komunitas **tetap utuh** agar laporan tidak berubah. Ketua harus menyerahkan jabatan dulu; ketua yang sendirian ikut menghapus komunitasnya.
 

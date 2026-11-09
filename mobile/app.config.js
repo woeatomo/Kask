@@ -5,8 +5,19 @@
 const TEST_ANDROID_APP_ID = 'ca-app-pub-3940256099942544~3347511713';
 const TEST_IOS_APP_ID = 'ca-app-pub-3940256099942544~1458002511';
 
+// File Firebase untuk push notification Android (FCM).
+// Di EAS: simpan sebagai environment variable bertipe *file* bernama GOOGLE_SERVICES_JSON.
+// Lokal: letakkan di mobile/google-services.json (sudah di-.gitignore).
+const fs = require('fs');
+const googleServicesFile =
+  process.env.GOOGLE_SERVICES_JSON || (fs.existsSync('./google-services.json') ? './google-services.json' : undefined);
+
 module.exports = ({ config }) => ({
   ...config,
+  android: {
+    ...config.android,
+    ...(googleServicesFile ? { googleServicesFile } : {}),
+  },
   plugins: [
     ...(config.plugins ?? []),
     [

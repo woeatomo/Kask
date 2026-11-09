@@ -41,3 +41,7 @@ yarn-error.*
 /android
 
 .env
+
+# Firebase (push Android) — simpan di EAS sebagai env var bertipe file
+google-services.json
+GoogleService-Info.plist
