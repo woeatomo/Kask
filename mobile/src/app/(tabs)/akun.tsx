@@ -5,6 +5,7 @@ import { Badge, Body, Button, Card, ListItem, Muted, Screen, SectionTitle, style
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, communityLabel } from '@/lib/format';
+import { formatPhone } from '@/lib/phone';
 import { unregisterPush } from '@/lib/push';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
@@ -24,7 +25,7 @@ export default function Akun() {
   function deleteAccount() {
     Alert.alert(
       'Hapus akun?',
-      'Login, nama, nomor HP, alamat, dan notifikasi Anda akan dihapus permanen. Catatan iuran dan kas komunitas tetap disimpan tanpa nama agar laporan kas tetap akurat. Tindakan ini tidak bisa dibatalkan.',
+      'Login, nama, nomor WhatsApp, alamat, dan notifikasi Anda akan dihapus permanen. Catatan iuran dan kas komunitas tetap disimpan tanpa nama agar laporan kas tetap akurat. Tindakan ini tidak bisa dibatalkan.',
       [
         { text: 'Batal', style: 'cancel' },
         {
@@ -65,8 +66,7 @@ export default function Akun() {
           <Ionicons name="person-circle" size={52} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Body style={{ fontWeight: '700', fontSize: 17 }}>{profile?.full_name || '-'}</Body>
-            <Muted>{session?.user.email}</Muted>
-            {profile?.phone ? <Muted>{profile.phone}</Muted> : null}
+            <Muted>WhatsApp {formatPhone(profile?.phone ?? (session?.user.phone ? `+${session.user.phone}` : null))}</Muted>
           </View>
         </View>
         <Button title="Ubah profil" small variant="secondary" onPress={() => router.push('/profile')} style={{ marginTop: space.md, alignSelf: 'flex-start' }} />

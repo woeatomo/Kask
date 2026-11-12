@@ -13,6 +13,7 @@ grant usage on schema public, auth, storage, extensions to anon, authenticated;
 create table if not exists auth.users (
   id uuid primary key,
   email text,
+  phone text,
   raw_user_meta_data jsonb default '{}'::jsonb
 );
 

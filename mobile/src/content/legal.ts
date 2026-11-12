@@ -27,7 +27,7 @@ export interface FaqCategory {
   items: FaqItem[];
 }
 
-export const LEGAL_UPDATED = '8 November 2026';
+export const LEGAL_UPDATED = '12 November 2026';
 
 export interface LegalVars {
   developer: string;
@@ -64,7 +64,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
   {
     title: '3. Data yang kami kumpulkan',
     bullets: [
-      'Data akun: nama lengkap, alamat email, nomor HP (opsional), dan kata sandi. Kata sandi disimpan dalam bentuk hash oleh layanan autentikasi dan tidak dapat kami baca.',
+      'Data akun: nama lengkap, nomor WhatsApp (dipakai untuk masuk dan menerima kode verifikasi), dan kata sandi. Kata sandi disimpan dalam bentuk hash oleh layanan autentikasi dan tidak dapat kami baca.',
       'Data keanggotaan: komunitas yang Anda ikuti, RT, alamat atau nomor rumah, serta peran dan jabatan Anda (warga, pengurus, ketua).',
       'Data keuangan komunitas: tagihan iuran, pembayaran (nominal, metode, catatan, tanggal), foto bukti pembayaran yang Anda unggah, dan transaksi kas yang dicatat pengurus.',
       'Konten: berita, pengumuman, dan gambar yang dibuat pengurus.',
@@ -78,7 +78,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
   {
     title: '4. Tujuan penggunaan data',
     bullets: [
-      'Membuat dan mengelola akun Anda, termasuk memverifikasi email dan mengatur ulang kata sandi.',
+      'Membuat dan mengelola akun Anda, termasuk memverifikasi nomor WhatsApp dan mengatur ulang kata sandi melalui kode OTP yang dikirim lewat WhatsApp.',
       'Menjalankan fitur Kask: keanggotaan komunitas, tagihan, pembayaran, verifikasi, laporan kas, dan berita.',
       'Mengirim notifikasi terkait aktivitas komunitas Anda, misalnya tagihan baru, status pembayaran, dan pengumuman.',
       'Mengelola paket langganan komunitas (Gratis/Premium) dan menampilkan iklan pada paket Gratis.',
@@ -94,7 +94,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     title: '5. Siapa yang dapat melihat data Anda',
     bullets: [
       'Sesama anggota aktif komunitas dapat melihat nama, jabatan, dan RT Anda pada daftar anggota.',
-      'Ketua dan pengurus komunitas dapat melihat nomor HP, alamat, tagihan, riwayat pembayaran, dan foto bukti pembayaran Anda. Di komunitas RW, pengurus yang wewenangnya dibatasi ke satu RT hanya dapat melihat data warga RT tersebut.',
+      'Ketua dan pengurus komunitas dapat melihat nomor WhatsApp, alamat, tagihan, riwayat pembayaran, dan foto bukti pembayaran Anda. Di komunitas RW, pengurus yang wewenangnya dibatasi ke satu RT hanya dapat melihat data warga RT tersebut.',
       'Buku kas komunitas dapat dilihat oleh semua anggota demi transparansi. Pemasukan dari iuran yang telah diverifikasi dicatat bersama nama pembayar.',
       'Warga biasa tidak dapat melihat tagihan, pembayaran, maupun bukti pembayaran warga lain.',
       'Tim pengelola Kask (kami) dapat mengakses data bila diperlukan untuk dukungan teknis, keamanan, atau kewajiban hukum.',
@@ -105,6 +105,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     intro: 'Kami menggunakan penyedia layanan berikut untuk menjalankan Kask:',
     bullets: [
       'Supabase: basis data, autentikasi, dan penyimpanan file (termasuk foto bukti pembayaran dan gambar berita).',
+      'Penyedia layanan WhatsApp (Meta WhatsApp Business Platform atau gateway WhatsApp lain yang kami gunakan): pengiriman kode verifikasi (OTP) ke nomor WhatsApp Anda. Yang dikirim hanya nomor tujuan dan isi pesan kode.',
       'Expo (650 Industries): pengiriman notifikasi push ke perangkat.',
       'Google (Firebase Cloud Messaging) dan Apple (Apple Push Notification service): penyaluran notifikasi ke perangkat Android dan iOS.',
       'Google AdMob: penayangan iklan pada komunitas berpaket Gratis. Lihat kebijakan privasi Google di https://policies.google.com/privacy.',
@@ -120,7 +121,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     title: '8. Penyimpanan dan penghapusan data',
     bullets: [
       'Data akun disimpan selama akun Anda aktif.',
-      'Anda dapat menghapus akun kapan saja melalui menu Akun → Hapus akun. Setelah itu, login Anda dihapus, nama pada profil diganti menjadi "Akun dihapus", nomor HP dan alamat dihapus, keanggotaan dinonaktifkan, dan token notifikasi serta kotak masuk notifikasi Anda dihapus.',
+      'Anda dapat menghapus akun kapan saja melalui menu Akun → Hapus akun. Setelah itu, login Anda dihapus, nama pada profil diganti menjadi "Akun dihapus", nomor WhatsApp dan alamat dihapus, keanggotaan dinonaktifkan, dan token notifikasi serta kotak masuk notifikasi Anda dihapus.',
       'Catatan keuangan komunitas (tagihan, pembayaran, bukti pembayaran, dan transaksi kas) adalah bagian dari pembukuan komunitas, sehingga tetap disimpan secara anonim setelah akun dihapus agar laporan kas tetap akurat. Data tersebut ikut terhapus bila komunitasnya dihapus.',
       'Jika Anda adalah ketua dan satu-satunya anggota sebuah komunitas, komunitas tersebut beserta seluruh datanya ikut terhapus saat akun dihapus. Jika masih ada anggota lain, Anda perlu menyerahkan jabatan ketua terlebih dahulu.',
       'Notifikasi yang belum terkirim lebih dari 1 hari tidak dikirim lagi.',
@@ -197,7 +198,7 @@ export const FAQ: FaqCategory[] = [
     items: [
       {
         q: 'Bagaimana cara bergabung ke komunitas RT/RW saya?',
-        a: 'Minta kode undangan 6 karakter dari pengurus RT/RW. Setelah daftar dan masuk, pilih "Gabung dengan kode", masukkan kodenya, pilih RT (untuk komunitas RW), lalu isi alamat rumah. Permintaan Anda akan disetujui pengurus.',
+        a: 'Daftar dengan nomor WhatsApp, lalu masukkan kode verifikasi 6 digit yang dikirim lewat WhatsApp. Minta kode undangan 6 karakter dari pengurus RT/RW. Setelah masuk, pilih "Gabung dengan kode", masukkan kodenya, pilih RT (untuk komunitas RW), lalu isi alamat rumah. Permintaan Anda akan disetujui pengurus.',
       },
       {
         q: 'Kenapa saya harus menunggu persetujuan?',
@@ -276,7 +277,15 @@ export const FAQ: FaqCategory[] = [
     items: [
       {
         q: 'Saya lupa kata sandi.',
-        a: 'Di halaman masuk, isi email Anda lalu tekan "Lupa password?". Tautan untuk mengatur ulang kata sandi akan dikirim ke email Anda.',
+        a: 'Di halaman masuk, tekan "Lupa password?", lalu masukkan nomor WhatsApp akun Anda. Kode 6 digit dikirim lewat WhatsApp. Setelah kode dimasukkan, Anda bisa langsung membuat password baru.',
+      },
+      {
+        q: 'Kode verifikasi WhatsApp tidak masuk.',
+        a: 'Pastikan nomor yang dimasukkan aktif di WhatsApp dan koneksi internet HP lancar. Tunggu 1 menit lalu tekan "Kirim ulang kode". Kode berlaku beberapa menit saja. Jika tetap tidak masuk, hubungi kami di {{EMAIL}}.',
+      },
+      {
+        q: 'Saya ganti nomor WhatsApp, bagaimana?',
+        a: 'Nomor WhatsApp adalah identitas masuk akun, jadi tidak bisa diubah sendiri dari aplikasi. Hubungi kami di {{EMAIL}} dari nomor lama (bila masih bisa) untuk dibantu memindahkan akun.',
       },
       {
         q: 'Notifikasi tidak muncul di HP saya.',
@@ -284,7 +293,7 @@ export const FAQ: FaqCategory[] = [
       },
       {
         q: 'Bagaimana cara menghapus akun?',
-        a: 'Buka Akun → Hapus akun. Data pribadi Anda dihapus atau dianonimkan, sedangkan catatan keuangan komunitas tetap tersimpan tanpa nama agar laporan kas tetap akurat. Jika Anda ketua, serahkan jabatan ketua terlebih dahulu.',
+        a: 'Buka Akun → Hapus akun. Nama, nomor WhatsApp, dan data pribadi lain dihapus atau dianonimkan, sedangkan catatan keuangan komunitas tetap tersimpan tanpa nama agar laporan kas tetap akurat. Jika Anda ketua, serahkan jabatan ketua terlebih dahulu.',
       },
       {
         q: 'Apakah data saya aman?',
