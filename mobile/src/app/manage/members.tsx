@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 import { router } from 'expo-router';
 import { useActionSheet, type SheetOption } from '@/components/ActionSheet';
 import { Badge, Body, Button, Card, Chips, Empty, ListItem, Loading, Muted, ProgressBar, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useCommunity, useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, tanggal } from '@/lib/format';
+import { formatPhone } from '@/lib/phone';
 import type { CommunityUsage } from '@/lib/plan';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
@@ -103,6 +104,10 @@ export default function Members() {
     const name = m.profiles?.full_name || 'Anggota';
     const isSelf = m.id === current.id;
     const buttons: SheetOption[] = [];
+    if (m.profiles?.phone && !isSelf) {
+      const wa = m.profiles.phone.replace(/\D/g, '');
+      buttons.push({ label: 'Chat WhatsApp', onPress: () => Linking.openURL(`https://wa.me/${wa}`) });
+    }
     if (isKetua && m.role !== 'ketua') {
       buttons.push({ label: m.role === 'pengurus' ? 'Ubah jabatan' : 'Jadikan pengurus', onPress: () => choosePosition(m) });
       if (m.role === 'pengurus') {
@@ -137,7 +142,11 @@ export default function Members() {
       });
     }
     if (buttons.length === 0) return;
-    sheet({ title: name, message: [m.profiles?.phone, m.address].filter(Boolean).join(' · ') || undefined, options: buttons });
+    sheet({
+      title: name,
+      message: [m.profiles?.phone ? formatPhone(m.profiles.phone) : null, m.address].filter(Boolean).join(' · ') || undefined,
+      options: buttons,
+    });
   }
 
   const memberItem = (m: MemberRow) => (
@@ -194,7 +203,7 @@ export default function Members() {
             <Card key={m.id}>
               <Body style={{ fontWeight: '700' }}>{m.profiles?.full_name || 'Tanpa nama'}</Body>
               <Muted>
-                {[m.rt_units ? `RT ${m.rt_units.rt_number}` : null, m.address, m.profiles?.phone].filter(Boolean).join(' · ') || '-'}
+                {[m.rt_units ? `RT ${m.rt_units.rt_number}` : null, m.address, m.profiles?.phone ? formatPhone(m.profiles.phone) : null].filter(Boolean).join(' · ') || '-'}
               </Muted>
               <Muted>Mendaftar {tanggal(m.joined_at)}</Muted>
               <View style={[ui.row, { gap: space.sm, marginTop: space.md }]}>

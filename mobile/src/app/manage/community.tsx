@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
+import { CommunityAvatar } from '@/components/CommunityAvatar';
 import { Body, Button, Card, Input, ListItem, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
+import { pickImage, uploadImage } from '@/lib/storage';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
@@ -18,6 +20,48 @@ export default function CommunitySettings() {
   const [bankInfo, setBankInfo] = useState(c.bank_info ?? '');
   const [saving, setSaving] = useState(false);
   const [newRt, setNewRt] = useState('');
+  const [logoBusy, setLogoBusy] = useState(false);
+
+  async function changeLogo() {
+    try {
+      const img = await pickImage({ square: true });
+      if (!img) return;
+      if (img.base64.length * 0.75 > 1024 * 1024) {
+        return Alert.alert('Gambar terlalu besar', 'Ukuran logo maksimal 1 MB. Pilih gambar yang lebih kecil.');
+      }
+      setLogoBusy(true);
+      const oldPath = c.logo_path;
+      const path = await uploadImage('community-logos', communityId, img);
+      const { error } = await supabase.from('communities').update({ logo_path: path }).eq('id', communityId);
+      if (error) throw error;
+      if (oldPath) await supabase.storage.from('community-logos').remove([oldPath]);
+      await refresh();
+    } catch (e) {
+      Alert.alert('Gagal mengganti logo', errorMessage(e));
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  function removeLogo() {
+    if (!c.logo_path) return;
+    Alert.alert('Hapus logo?', 'Header akan kembali menampilkan inisial komunitas.', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          setLogoBusy(true);
+          const oldPath = c.logo_path!;
+          const { error } = await supabase.from('communities').update({ logo_path: null }).eq('id', communityId);
+          if (!error) await supabase.storage.from('community-logos').remove([oldPath]);
+          setLogoBusy(false);
+          if (error) return Alert.alert('Gagal', errorMessage(error));
+          await refresh();
+        },
+      },
+    ]);
+  }
 
   const loadRt = reloadRtUnits;
 
@@ -84,6 +128,25 @@ export default function CommunitySettings() {
   return (
     <Screen>
       {!isKetua && <Muted style={{ marginBottom: space.md }}>Hanya ketua yang dapat mengubah data komunitas.</Muted>}
+      <Card style={{ alignItems: 'center' }}>
+        <CommunityAvatar community={c} size={96} />
+        <Body style={{ fontWeight: '700', marginTop: space.sm }}>Logo komunitas</Body>
+        <Muted style={{ textAlign: 'center', marginTop: 2 }}>
+          Tampil di header Beranda semua anggota. Gunakan gambar persegi, maks. 1 MB.
+        </Muted>
+        {isKetua && (
+          <View style={[ui.row, { gap: space.sm, marginTop: space.md }]}>
+            <Button
+              title={c.logo_path ? 'Ganti logo' : 'Pilih logo'}
+              icon="image-outline"
+              small
+              loading={logoBusy}
+              onPress={changeLogo}
+            />
+            {c.logo_path ? <Button title="Hapus" small variant="ghost" disabled={logoBusy} onPress={removeLogo} /> : null}
+          </View>
+        )}
+      </Card>
       <Input label="Nama komunitas" value={name} onChangeText={setName} editable={isKetua} />
       <Input label="Kelurahan / Desa" value={kelurahan} onChangeText={setKelurahan} editable={isKetua} />
       <Input label="Kecamatan" value={kecamatan} onChangeText={setKecamatan} editable={isKetua} />

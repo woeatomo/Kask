@@ -1,4 +1,4 @@
-# Panduan Deploy Kask: dari Server sampai Live di Play Store & App Store
+# Panduan Deploy Kasmee: dari Server sampai Live di Play Store & App Store
 
 Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **✅ Cek**, sehingga kalau ada yang salah, ketahuan di tahap itu dan tidak menumpuk.
 
@@ -9,8 +9,8 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 0. [Gambaran besar & biaya](#0-gambaran-besar--biaya)
 1. [Siapkan akun & tools](#1-siapkan-akun--tools)
 2. [Server: Supabase](#2-server-supabase)
-3. [Situs publik: FAQ, Kebijakan Privasi, reset password](#3-situs-publik-faq-kebijakan-privasi-reset-password)
-4. [Supabase Auth: email & tautan](#4-supabase-auth-email--tautan)
+3. [Situs publik: FAQ & Kebijakan Privasi](#3-situs-publik-faq--kebijakan-privasi)
+4. [Login WhatsApp: OTP lewat WhatsApp](#4-login-whatsapp-otp-lewat-whatsapp)
 5. [Push notification: Edge Function & webhook](#5-push-notification-edge-function--webhook)
 6. [Identitas aplikasi & EAS](#6-identitas-aplikasi--eas)
 7. [Firebase (push Android) & AdMob (iklan)](#7-firebase-push-android--admob-iklan)
@@ -30,14 +30,17 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 ```
  HP warga (Android / iOS)                  Situs publik (GitHub Pages)
  ┌───────────────────────┐                 ┌──────────────────────────────┐
- │ Aplikasi Kask (Expo)   │                 │ FAQ · Kebijakan Privasi      │
- │  - login, iuran, kas   │                 │ konfirmasi email · reset pwd │
- │  - iklan AdMob (Gratis)│                 └──────────────────────────────┘
- └─────────┬─────────────┘
-           │ HTTPS (supabase-js)
- ┌─────────▼──────────────────────────────────────────────┐
- │ Supabase                                                │
- │  Postgres + RLS (data per komunitas)  · Auth (email)    │
+ │ Aplikasi Kasmee (Expo)   │                 │ FAQ · Kebijakan Privasi      │
+ │  - login nomor WA      │                 └──────────────────────────────┘
+ │  - iuran, kas, berita  │
+ │  - iklan AdMob (Gratis)│◄──── kode OTP via WhatsApp ────┐
+ └─────────┬─────────────┘                                 │
+           │ HTTPS (supabase-js)                           │
+ ┌─────────▼──────────────────────────────────────────────┐ │
+ │ Supabase                                                │ │
+ │  Postgres + RLS (data per komunitas)                    │ │
+ │  Auth (nomor HP) ──► Send SMS Hook ──► Edge Function ───┼─┘ WhatsApp Cloud API
+ │                                       "send-whatsapp-otp"│   (Meta) / Fonnte
  │  Storage (bukti transfer, gambar berita)                │
  │  Edge Function "push" ◄── Database Webhook (notifikasi) │
  └─────────┬───────────────────────────────────────────────┘
@@ -51,7 +54,7 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 | Google Play Console | $25 sekali bayar | ya (Android) |
 | Apple Developer Program | $99/tahun | ya (iOS) |
 | Expo / EAS | Free tier cukup untuk mulai (kuota build per bulan terbatas, antrean lebih lama) | ya |
-| SMTP email (Resend, Brevo, dll.) | ada paket gratis | **ya**, lihat tahap 4 |
+| Pengiriman OTP WhatsApp | **Meta WhatsApp Cloud API**: bayar per pesan autentikasi (murah, cek tarif Indonesia di Meta) · **Fonnte**: paket bulanan | **ya**, lihat tahap 4 |
 | GitHub Pages | gratis (repo publik) | ya, atau Netlify/Cloudflare Pages |
 | AdMob, Firebase | gratis | ya |
 
@@ -71,13 +74,19 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 - [ ] **Apple Developer Program**: https://developer.apple.com/programs (pilih *Individual*, atau *Organization* yang butuh nomor D-U-N-S)
 - [ ] **Firebase**: https://console.firebase.google.com (pakai akun Google yang sama)
 - [ ] **AdMob**: https://admob.google.com
-- [ ] **Penyedia SMTP**, misalnya Resend / Brevo / Mailgun (untuk email konfirmasi & reset password)
+- [ ] **Pengirim OTP WhatsApp**: **Meta for Developers** (WhatsApp Cloud API, resmi), *atau* akun **Fonnte** (fonnte.com). Butuh satu **nomor HP khusus pengirim** yang belum dipakai di aplikasi WhatsApp biasa (untuk Meta)
 
 ### Tools di komputer
 ```bash
 node -v          # Node.js 20 atau lebih baru (proyek dites dengan Node 22)
 git --version
-npm install -g supabase       # Supabase CLI (atau: brew install supabase/tap/supabase)
+# Supabase CLI — pilih salah satu:
+#   macOS   : brew install supabase/tap/supabase
+#   Windows : scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+#             scoop install supabase
+#   semua OS: tanpa install, ganti setiap perintah `supabase ...` dengan `npx supabase@latest ...`
+#   (install global lewat `npm install -g supabase` TIDAK didukung)
+supabase --version
 npx eas-cli@latest --version  # EAS CLI, cukup dipanggil lewat npx
 ```
 
@@ -101,7 +110,7 @@ cd mobile && npm install && cd ..
 3. Simpan **Database password** di password manager.
 
 ### 2.2 Jalankan migrasi database
-Ada 5 file migrasi di `supabase/migrations/` yang **harus dijalankan berurutan**:
+Ada 6 file migrasi di `supabase/migrations/` yang **harus dijalankan berurutan**:
 
 | File | Isi |
 |---|---|
@@ -110,6 +119,7 @@ Ada 5 file migrasi di `supabase/migrations/` yang **harus dijalankan berurutan**
 | `…0003_rt_scope_notifications.sql` | wewenang per RT, notifikasi, antrean push |
 | `…0004_plans.sql` | paket Gratis/Premium |
 | `…0005_limits_account_deletion.sql` | batas anggota, pengaturan, hapus akun |
+| `…0006_phone_auth.sql` | login nomor WhatsApp (nomor login tersinkron ke profil) |
 
 **Cara A: Supabase CLI (disarankan)**
 ```bash
@@ -121,7 +131,7 @@ supabase db push              # menjalankan semua migrasi yang belum ada di serv
 ```
 
 **Cara B: SQL Editor**
-Dashboard → **SQL Editor** → New query. Salin isi file `0001`, Run, lalu lanjutkan ke `0002` dan seterusnya sampai `0005`.
+Dashboard → **SQL Editor** → New query. Salin isi file `0001`, Run, lalu lanjutkan ke `0002` dan seterusnya sampai `0006`.
 
 ### 2.3 Verifikasi
 Jalankan di SQL Editor:
@@ -155,9 +165,9 @@ Free plan **menjeda proyek** setelah 1 minggu tanpa aktivitas dan tidak menyimpa
 
 ---
 
-## 3. Situs publik: FAQ, Kebijakan Privasi, reset password
+## 3. Situs publik: FAQ & Kebijakan Privasi
 
-Play Store dan App Store mewajibkan **URL Kebijakan Privasi**. Supabase juga butuh halaman tujuan untuk link **konfirmasi email** dan **reset password**. Semuanya dibuat otomatis ke folder `docs/`.
+Play Store dan App Store mewajibkan **URL Kebijakan Privasi** dan URL penghapusan akun. Keduanya dibuat otomatis ke folder `docs/`. (Konfirmasi akun dan lupa password memakai OTP WhatsApp **di dalam aplikasi**, jadi tidak butuh halaman web.)
 
 ### 3.1 Isi identitas & build
 Buat `mobile/.env` dari contoh:
@@ -170,54 +180,98 @@ EXPO_PUBLIC_SUPABASE_URL=https://abcd1234.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon/publishable key>
 EXPO_PUBLIC_DEVELOPER_NAME=Nama Anda / Nama Usaha
 EXPO_PUBLIC_SUPPORT_EMAIL=dukungan@domainanda.com
-EXPO_PUBLIC_SITE_URL=https://<akun-github>.github.io/Kask
 ```
 Lalu:
 ```bash
 cd mobile && npm run site:build
 ```
-Hasilnya: `docs/index.html`, `privacy-policy.html`, `faq.html`, `konfirmasi-email.html`, `reset-password.html`. Commit dan push ke `main`.
+Hasilnya: `docs/index.html`, `docs/privacy-policy.html`, `docs/faq.html`. Commit dan push ke `main`.
 
 > Kebijakan Privasi di `mobile/src/content/legal.ts` masih **draf**. Sebaiknya ditinjau konsultan hukum sebelum rilis, terutama bagian hak pengguna dan janji waktu tanggap 3×24 jam.
 
 ### 3.2 Aktifkan GitHub Pages
 Repo → **Settings → Pages** → Source: *Deploy from a branch* → Branch `main`, folder **`/docs`** → Save.
 
-- GitHub Pages gratis hanya untuk **repo publik**. Kalau repo-nya privat, unggah folder `docs/` ke **Cloudflare Pages** atau **Netlify** (drag & drop), lalu pakai URL dari sana sebagai `EXPO_PUBLIC_SITE_URL`.
-- Halaman ini menyematkan **anon key**. Itu aman, karena kuncinya memang publik dan semua akses dibatasi RLS.
+- GitHub Pages gratis hanya untuk **repo publik**. Kalau repo-nya privat, unggah folder `docs/` ke **Cloudflare Pages** atau **Netlify** (drag & drop), lalu pakai URL dari sana.
 
 ✅ **Cek**: buka `https://<akun>.github.io/Kask/privacy-policy.html`. Nama dan email Anda tampil, dan tidak ada teks "[email dukungan belum diisi]".
 
 ---
 
-## 4. Supabase Auth: email & tautan
+## 4. Login WhatsApp: OTP lewat WhatsApp
 
-### 4.1 Provider email
-Dashboard → **Authentication → Sign In / Providers → Email**:
-- **Enable Email provider**: on
-- **Confirm email**: on (disarankan agar email palsu tidak bisa daftar)
-- Minimum password length: 6 (sesuai validasi aplikasi)
+Warga **daftar dan masuk dengan nomor WhatsApp + password**:
+- **Daftar**: kode 6 digit dikirim ke WhatsApp, lalu dimasukkan di aplikasi.
+- **Lupa password**: kode 6 digit via WhatsApp, lalu warga langsung membuat password baru di aplikasi.
 
-### 4.2 URL
-Dashboard → **Authentication → URL Configuration**:
-- **Site URL**: `https://<akun>.github.io/Kask/konfirmasi-email.html`
-- **Redirect URLs**, tambahkan: `https://<akun>.github.io/Kask/**`
+Cara kerjanya: Supabase Auth membuat kode OTP, lalu memanggil **Send SMS Hook**, yaitu Edge Function `send-whatsapp-otp`. Function inilah yang mengirim kode ke WhatsApp lewat gateway pilihan Anda. Selama hook aktif, Supabase **tidak memakai provider SMS bawaan**.
 
-### 4.3 SMTP sendiri (wajib untuk live)
-SMTP bawaan Supabase hanya untuk uji coba: jumlah kirimnya sangat dibatasi, dan **hanya mengirim ke email anggota tim proyek**. Warga lain tidak akan menerima email konfirmasi.
+### 4.1 Pilih gateway WhatsApp
 
-Dashboard → **Authentication → Emails → SMTP Settings** → isi host, port, user, dan password dari penyedia SMTP. Sender misalnya `Kask <no-reply@domainanda.com>`. Verifikasi domain pengirim di penyedia SMTP (SPF/DKIM) agar email tidak masuk spam.
+| | **Meta WhatsApp Cloud API** (disarankan untuk live) | **Fonnte** |
+|---|---|---|
+| Status | Resmi dari Meta | Tidak resmi (memakai WhatsApp biasa yang dihubungkan via QR) |
+| Biaya | Bayar per pesan *authentication* | Paket bulanan |
+| Risiko | Kecil | Nomor pengirim **bisa diblokir WhatsApp** bila dianggap spam |
+| Setup | Lebih panjang (Meta Business, template) | 10 menit |
 
-### 4.4 (Opsional) Template email bahasa Indonesia
-**Authentication → Emails → Templates**. Contoh untuk *Confirm signup*:
-```html
-<h2>Konfirmasi email Kask</h2>
-<p>Klik tautan berikut untuk mengaktifkan akun Anda:</p>
-<p><a href="{{ .ConfirmationURL }}">Konfirmasi email</a></p>
+Saran: pakai **Fonnte** untuk uji coba atau pilot di 1–2 RT, lalu **Meta** sebelum rilis besar.
+
+**A. Meta WhatsApp Cloud API**
+1. https://developers.facebook.com → **My Apps → Create App** → jenis **Business** → tambahkan produk **WhatsApp**. Ikuti pembuatan/penautan **Meta Business Account**.
+2. **WhatsApp → API Setup**: tambahkan **nomor pengirim** (nomor yang *tidak* sedang dipakai di aplikasi WhatsApp/WA Business biasa) dan verifikasi. Catat **Phone number ID**.
+3. **WhatsApp Manager → Message templates → Create template**:
+   - Category **Authentication**, nama **`kasmee_otp`**, bahasa **Indonesian (`id`)**
+   - Tipe tombol **Copy code**, lalu kirim untuk persetujuan (biasanya cepat)
+4. **Token permanen**: Business Settings → **System users** → buat system user (Admin) → **Add assets** (aplikasi & akun WhatsApp) → **Generate token** dengan izin `whatsapp_business_messaging` dan `whatsapp_business_management`, tanpa kedaluwarsa.
+5. Tambahkan metode pembayaran di WhatsApp Manager. Untuk batas kirim yang lebih besar, selesaikan **Business Verification**.
+
+**B. Fonnte**
+1. Daftar di https://fonnte.com → **Add device** → scan QR dari HP dengan nomor pengirim khusus (jangan nomor pribadi).
+2. Salin **token device**.
+
+### 4.2 Aktifkan login nomor HP di Supabase
+Dashboard → **Authentication → Sign In / Providers**:
+- **Phone**: **Enable** → **Enable phone confirmations**: on.
+  - Bila dashboard meminta memilih provider SMS beserta kredensialnya, pilih **Twilio** dan isi nilai sembarang. Kredensial itu **tidak dipakai** selama Send SMS Hook aktif (lihat 4.3).
+  - **SMS OTP Expiry**: `300` detik (5 menit), karena pesan WhatsApp kadang terlambat. **OTP length**: `6`.
+- **Email**: boleh **dimatikan**, karena aplikasi tidak memakai email.
+
+Dashboard → **Authentication → Rate Limits** → naikkan batas **SMS/OTP per jam** (bawaannya kecil, mis. 30) sesuai jumlah warga yang mendaftar bersamaan.
+
+### 4.3 Deploy Edge Function & pasang hook
+1. Dashboard → **Authentication → Auth Hooks** → **Add hook** → **Send SMS hook** → tipe **HTTPS**:
+   - URL: `https://<project-ref>.supabase.co/functions/v1/send-whatsapp-otp`
+   - Tekan **Generate secret** lalu salin rahasianya (format `v1,whsec_...`). **Belum** perlu disimpan/diaktifkan bila function belum ter-deploy.
+2. Di komputer (root repo, setelah `supabase link`):
+   ```bash
+   supabase secrets set SEND_SMS_HOOK_SECRET='v1,whsec_...'
+
+   # --- jika memakai Meta ---
+   supabase secrets set WA_PROVIDER=meta \
+     WA_META_TOKEN='<token permanen>' \
+     WA_META_PHONE_ID='<phone number id>' \
+     WA_META_TEMPLATE=kasmee_otp WA_META_LANG=id
+
+   # --- jika memakai Fonnte ---
+   supabase secrets set WA_PROVIDER=fonnte WA_FONNTE_TOKEN='<token device>'
+
+   supabase functions deploy send-whatsapp-otp --no-verify-jwt
+   ```
+   `--no-verify-jwt` diperlukan karena pemanggilnya Supabase Auth. Keamanannya dijaga tanda tangan Standard Webhooks yang diperiksa function.
+3. Kembali ke halaman hook → **Enable** → **Create/Save**.
+
+Bila versi Graph API bawaan (`v23.0`) sudah tidak berlaku, set `WA_META_API_VERSION` ke versi terbaru dari dokumentasi Meta.
+
+### 4.4 Nomor uji (tanpa kirim WhatsApp)
+Untuk simulasi dan akun **reviewer toko**, Supabase punya **Test OTP**:
+Authentication → Sign In / Providers → **Phone** → **Test Phone Numbers and OTPs**, isi misalnya:
 ```
-Lakukan hal yang sama untuk *Reset password* ("Atur ulang password Kask").
+6281200000001=123456, 6281200000002=123456
+```
+Nomor ini tidak dikirimi pesan; kodenya selalu `123456`. Isi juga tanggal kedaluwarsanya.
 
-✅ **Cek**: setelah tahap 9, daftar akun baru dari HP. Email konfirmasi harus masuk, dan tautannya membuka halaman "Email terkonfirmasi". Uji juga "Lupa password?": tautannya membuka form ganti password, dan password baru bisa dipakai login.
+✅ **Cek**: setelah tahap 9, daftar akun dari HP dengan nomor WhatsApp asli. Kode harus masuk ke WhatsApp dalam beberapa detik. Uji juga **Lupa password?**: kode masuk, lalu muncul layar "Password Baru", dan password baru bisa dipakai login. Bila gagal, buka Edge Functions → `send-whatsapp-otp` → **Logs**.
 
 ---
 
@@ -258,27 +312,30 @@ Dashboard → **Integrations → Database Webhooks** (di dashboard versi lama: *
 
 ## 6. Identitas aplikasi & EAS
 
-### 6.1 Ubah identitas (lakukan SEBELUM build pertama)
-Edit `mobile/app.json`:
+### 6.1 Periksa identitas (lakukan SEBELUM build pertama)
+`mobile/app.json` sudah berisi:
 ```json
-"name": "Kask",
-"slug": "kask",
-"ios":     { "bundleIdentifier": "com.namaanda.kask", ... },
-"android": { "package":          "com.namaanda.kask", ... }
+"name": "Kasmee",
+"slug": "kasmee",
+"ios":     { "bundleIdentifier": "com.kasmee.app", ... },
+"android": { "package":          "com.kasmee.app", ... }
 ```
-- `bundleIdentifier`/`package` harus **unik di seluruh toko** dan **tidak bisa diganti** setelah rilis. Hindari `com.kask.app`, yang sangat mungkin sudah dipakai orang lain.
+- `package`/`bundleIdentifier` harus **unik di seluruh toko** dan **tidak bisa diganti** setelah rilis. Saat membuat aplikasi di Play Console (tahap 11), kalau `com.kasmee.app` ternyata sudah dipakai orang lain, ganti misalnya ke `id.kasmee.app` atau `com.<namaanda>.kasmee`, **sebelum** build production pertama.
 - Pakai huruf kecil, titik, dan tanpa tanda minus untuk Android.
 
 ### 6.2 Ikon & splash
-Ganti file di `mobile/assets/` dengan ukuran yang sama:
+Logo Kasmee sudah terpasang. Sumber vektornya ada di `mobile/assets/brand/`:
 
 | File | Ukuran | Keterangan |
 |---|---|---|
 | `icon.png` | 1024×1024 | ikon iOS & toko, tanpa transparansi |
-| `android-icon-foreground.png` | 512×512 | logo di tengah, area aman ±66% |
-| `android-icon-background.png` | 512×512 | latar ikon Android |
+| `android-icon-foreground.png` | 512×512 | logo di zona aman tengah (adaptive icon) |
+| `android-icon-background.png` | 512×512 | latar gradasi teal |
 | `android-icon-monochrome.png` | 432×432 | ikon tema Android 13+ |
 | `splash-icon.png` | 1024×1024 | logo layar pembuka |
+| `logo-kasmee.png` | 512×512 | logo di layar masuk/daftar & situs publik |
+
+Ikon Play Store (512×512) bisa memakai `icon.png` yang diperkecil. Untuk mengganti desain, edit SVG di `mobile/assets/brand/` lalu render ulang ke ukuran-ukuran di atas.
 
 ### 6.3 Hubungkan ke EAS
 ```bash
@@ -322,13 +379,12 @@ Selama App ID dan Ad unit ID belum diisi, aplikasi memakai **iklan tes Google**.
 
 ## 8. Environment variable di EAS
 
-`mobile/.env` hanya dipakai di komputer lokal. Build di server EAS membaca variabel dari **expo.dev → proyek Kask → Environment variables**. Isi untuk environment **development**, **preview**, dan **production** (eas.json sudah memetakan setiap profil build ke environment-nya).
+`mobile/.env` hanya dipakai di komputer lokal. Build di server EAS membaca variabel dari **expo.dev → proyek Kasmee → Environment variables**. Isi untuk environment **development**, **preview**, dan **production** (eas.json sudah memetakan setiap profil build ke environment-nya).
 
 | Nama | Nilai | Tipe / visibilitas |
 |---|---|---|
 | `EXPO_PUBLIC_SUPABASE_URL` | URL proyek Supabase | Plain text |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | anon/publishable key | Plain text |
-| `EXPO_PUBLIC_SITE_URL` | `https://<akun>.github.io/Kask` | Plain text |
 | `EXPO_PUBLIC_DEVELOPER_NAME` | nama Anda/usaha | Plain text |
 | `EXPO_PUBLIC_SUPPORT_EMAIL` | email dukungan | Plain text |
 | `EXPO_PUBLIC_UPGRADE_WHATSAPP` | `628xxxxxxxxxx` (kontak upgrade Premium) | Plain text |
@@ -352,12 +408,12 @@ Push notification, iklan, dan pemblokiran screenshot **tidak berjalan di Expo Go
 cd mobile
 npx eas-cli@latest build --profile development --platform android
 # selesai ±10–20 menit → buka link/QR dari EAS di HP Android → install APK
-npx expo start --dev-client     # lalu buka aplikasi Kask (dev) di HP & scan QR
+npx expo start --dev-client     # lalu buka aplikasi Kasmee (dev) di HP & scan QR
 ```
 Untuk iPhone, `--platform ios` butuh akun Apple Developer, dan perangkat harus didaftarkan lebih dulu lewat `npx eas-cli@latest device:create`.
 
 **Skenario uji minimal** (pakai 2 HP / 2 akun):
-- [ ] Daftar akun A → email konfirmasi masuk → tautan membuka halaman "Email terkonfirmasi" → login berhasil
+- [ ] Daftar akun A dengan nomor WhatsApp → kode masuk ke WhatsApp → masukkan kode → langsung masuk ke aplikasi
 - [ ] Akun A: *Buat komunitas* (RW) → tambah RT 01 & RT 02 di Pengaturan komunitas
 - [ ] Akun B: daftar → *Gabung dengan kode* (RT 01) → **akun A menerima push "Permintaan bergabung"**
 - [ ] A menyetujui B → B menerima push → B masuk ke Beranda
@@ -365,7 +421,7 @@ Untuk iPhone, `--platform ios` butuh akun Apple Developer, dan perangkat harus d
 - [ ] B: bayar + unggah foto bukti → A menerima push → A *Terima* → kas bertambah, B menerima push "diterima"
 - [ ] Buka tab **Kas** lalu coba screenshot → hasilnya hitam/diblokir
 - [ ] Banner iklan **tes** muncul di Beranda/Berita
-- [ ] "Lupa password?" → email masuk → ganti password di halaman web → login dengan password baru
+- [ ] "Lupa password?" → kode WhatsApp masuk → buat password baru → keluar → login dengan password baru
 - [ ] Akun → Hapus akun (pakai akun uji coba ketiga) berhasil
 
 ✅ **Cek**: semua kotak di atas tercentang.
@@ -378,18 +434,19 @@ Untuk iPhone, `--platform ios` butuh akun Apple Developer, dan perangkat harus d
 Daftar lewat aplikasi, lalu di SQL Editor:
 ```sql
 update public.profiles set is_super_admin = true
-where id = (select id from auth.users where email = 'email-anda@contoh.com');
+where id = (select id from auth.users where phone = '6281234567890');  -- nomor WA Anda, tanpa "+" dan tanpa 0 di depan
 ```
 Tutup dan buka lagi aplikasi. Menu **Panel admin (developer)** muncul di tab Akun.
 
 ### 10.2 Akun demo untuk reviewer Google & Apple
-Reviewer wajib bisa login. Siapkan:
-1. Akun `reviewer@domainanda.com` (password kuat) yang sudah dikonfirmasi.
-2. Akun itu membuat komunitas **"Demo RT 01 / RW 01"**, beserta 1–2 iuran, beberapa transaksi kas, dan 1 berita.
-3. Akun kedua sebagai warga yang sudah bergabung, dengan 1 pembayaran menunggu verifikasi.
-4. Dari Panel Admin, aktifkan **Premium tanpa batas** untuk komunitas demo, supaya reviewer bisa mencoba export PDF.
+Reviewer wajib bisa login, padahal mereka tidak bisa menerima WhatsApp Anda. Solusinya: **nomor uji** (tahap 4.4).
+1. Daftarkan nomor uji, mis. `6281200000001=123456`, dengan kedaluwarsa cukup panjang (mis. 1 tahun).
+2. Daftar di aplikasi dengan nomor `081200000001` dan password kuat. Masukkan kode `123456`.
+3. Akun itu membuat komunitas **"Demo RT 01 / RW 01"**, beserta 1–2 iuran, beberapa transaksi kas, dan 1 berita.
+4. Akun kedua (nomor uji `081200000002`) bergabung sebagai warga, dengan 1 pembayaran menunggu verifikasi.
+5. Dari Panel Admin, aktifkan **Premium tanpa batas** untuk komunitas demo, supaya reviewer bisa mencoba export PDF.
 
-Simpan email/password akun demo. Keduanya diisi di Play Console (*App access*) dan App Store Connect (*App Review Information*).
+Simpan nomor dan password akun demo, lalu tulis di Play Console (*App access*) dan App Store Connect (*App Review Information*). Tambahkan catatan: *"Login with phone 081200000001 and password …. If an OTP is requested, use 123456."*
 
 ---
 
@@ -403,7 +460,7 @@ npx eas-cli@latest build --profile production --platform android
 Hasilnya file **.aab**. Nomor build naik otomatis (`autoIncrement`), dan kunci upload dikelola EAS.
 
 ### 11.2 Buat aplikasi di Play Console
-**Create app** → nama "Kask", bahasa Indonesia, *App*, *Free*. Centang deklarasi.
+**Create app** → nama "Kasmee", bahasa Indonesia, *App*, *Free*. Centang deklarasi.
 
 ### 11.3 Lengkapi "App content" / "Policy"
 | Bagian | Isi |
@@ -416,10 +473,10 @@ Hasilnya file **.aab**. Nomor build naik otomatis (`autoIncrement`), dan kunci u
 | Data safety | lihat tabel di bawah |
 | Data deletion | URL: `https://<akun>.github.io/Kask/index.html` (berisi cara hapus akun) |
 | Financial features | aplikasi ini **bukan** layanan keuangan (tidak ada pinjaman/rekening). Pilih "tidak menyediakan fitur keuangan" kecuali reviewer meminta lain |
-| News app | **No**. Berita di Kask adalah pengumuman komunitas |
+| News app | **No**. Berita di Kasmee adalah pengumuman komunitas |
 
 **Data safety** (sesuaikan dengan Kebijakan Privasi):
-- **Dikumpulkan**: Name, Email address, Phone number (opsional), Address (alamat rumah), Photos (bukti pembayaran, dari pilihan pengguna), *Financial info → Other* (riwayat pembayaran iuran), Device or other IDs (push token, ID iklan via AdMob), App interactions/diagnostics (oleh SDK iklan).
+- **Dikumpulkan**: Name, Phone number (wajib, untuk login & OTP WhatsApp), Address (alamat rumah), Photos (bukti pembayaran, dari pilihan pengguna), *Financial info → Other* (riwayat pembayaran iuran), Device or other IDs (push token, ID iklan via AdMob), App interactions/diagnostics (oleh SDK iklan).
 - **Dibagikan ke pihak ketiga**: Device or other IDs → AdMob (Advertising).
 - **Dienkripsi saat transit**: Yes. **Pengguna bisa meminta penghapusan**: Yes.
 
@@ -445,7 +502,7 @@ Perintah ini butuh *Google service account* dengan akses Play Console API. Ikuti
 
 ### 12.1 Buat app di App Store Connect
 https://appstoreconnect.apple.com → **Apps → +** → New App:
-- Platform iOS, nama "Kask" (harus unik di App Store), bahasa Indonesian
+- Platform iOS, nama "Kasmee" (harus unik di App Store), bahasa Indonesian
 - **Bundle ID**: sama dengan `ios.bundleIdentifier` (tahap 6.1). Bila belum muncul, EAS akan mendaftarkannya saat build.
 
 ### 12.2 Build & upload
@@ -465,13 +522,13 @@ Uji ulang skenario tahap 9 di iPhone lewat aplikasi TestFlight. Pastikan push mu
 |---|---|
 | Privacy Policy URL | `https://<akun>.github.io/Kask/privacy-policy.html` |
 | Support URL | `https://<akun>.github.io/Kask/faq.html` |
-| App Privacy | Contact Info (nama, email, telepon), User Content (foto bukti), Financial Info (riwayat pembayaran), Identifiers (Device ID untuk iklan pihak ketiga), Usage/Diagnostics. Semuanya *linked to user*, dan **tidak** dipakai untuk tracking lintas aplikasi |
+| App Privacy | Contact Info (nama, nomor telepon), User Content (foto bukti), Financial Info (riwayat pembayaran), Identifiers (Device ID untuk iklan pihak ketiga), Usage/Diagnostics. Semuanya *linked to user*, dan **tidak** dipakai untuk tracking lintas aplikasi |
 | Age rating | 4+ / 9+ sesuai kuesioner. Ada iklan, tanpa konten dewasa |
 | App Review Information | akun demo (10.2) + catatan singkat cara mencoba |
 | Screenshots | iPhone 6.7"/6.9". Kas & Rekap memblokir screenshot, jadi pakai halaman lain |
 
 **Catatan review yang disarankan** (tempel di *Notes*):
-> Kask helps neighbourhood associations (RT/RW) in Indonesia manage dues and community cash books. Demo login: reviewer@… / …. The demo community has Premium enabled. Premium is a plan purchased by the organisation (the neighbourhood association), activated by us after an offline agreement; there is no in-app purchase or external purchase link in the iOS app. Account deletion: Akun → Hapus akun.
+> Kasmee helps neighbourhood associations (RT/RW) in Indonesia manage dues and community cash books. Demo login: reviewer@… / …. The demo community has Premium enabled. Premium is a plan purchased by the organisation (the neighbourhood association), activated by us after an offline agreement; there is no in-app purchase or external purchase link in the iOS app. Account deletion: Akun → Hapus akun.
 
 ⚠️ **Risiko kebijakan pembayaran**: Apple bisa meminta fitur Premium dijual lewat In-App Purchase. Aplikasi iOS sudah tidak menampilkan harga maupun tautan pembayaran. Kalau tetap ditolak, opsinya adalah memasang IAP (mis. RevenueCat) yang memanggil `admin_set_plan` dari server.
 
@@ -485,17 +542,17 @@ Pilih build dari TestFlight → **Add for Review** → **Submit**.
 **Server**
 - [ ] Supabase **Pro** (tidak dijeda, ada backup harian)
 - [ ] 5 migrasi sudah jalan, dan query verifikasi 2.3 OK
-- [ ] SMTP sendiri aktif, dan email konfirmasi & reset sampai ke inbox (bukan spam)
+- [ ] Login Phone aktif, Send SMS Hook aktif, dan OTP WhatsApp sampai untuk daftar & lupa password
+- [ ] Rate limit OTP sudah dinaikkan, OTP expiry 300 detik
 - [ ] Site URL & Redirect URLs mengarah ke situs publik
 - [ ] Edge Function `push` deployed + secret + webhook, dan log menunjukkan `sent`
 
 **Situs publik**
 - [ ] `privacy-policy.html` & `faq.html` menampilkan nama dan email asli
-- [ ] `reset-password.html` sudah dites end-to-end
 - [ ] (AdMob) `app-ads.txt` di akar domain
 
 **Aplikasi**
-- [ ] `bundleIdentifier` / `package` final, ikon & splash sudah diganti
+- [ ] `bundleIdentifier` / `package` final (`com.kasmee.app` atau pengganti bila sudah dipakai)
 - [ ] `extra.eas.projectId` ada di app.json
 - [ ] Semua env var EAS terisi untuk **production**, termasuk ID AdMob asli
 - [ ] FCM V1 key terunggah, dan push Android & iOS sudah dites di build preview/TestFlight
@@ -535,7 +592,7 @@ Batas anggota paket Gratis bisa diubah dari Panel admin → *Pengaturan paket Gr
 Proyek ini belum memakai `expo-updates`, jadi **setiap perubahan aplikasi butuh rilis toko**.
 
 ### Perubahan database
-Tambahkan file migrasi baru dengan nomor berikutnya (mis. `20261201000006_….sql`), uji dulu lewat `supabase/tests/run_local.sh` di Postgres lokal, lalu jalankan `supabase db push`. **Jangan** mengedit file migrasi yang sudah dijalankan di server.
+Tambahkan file migrasi baru dengan nomor berikutnya (mis. `20261201000007_….sql`), uji dulu lewat `supabase/tests/run_local.sh` di Postgres lokal, lalu jalankan `supabase db push`. **Jangan** mengedit file migrasi yang sudah dijalankan di server.
 
 ### Backup
 - Pro plan: backup harian otomatis (Dashboard → Database → Backups).
@@ -551,8 +608,14 @@ Tambahkan file migrasi baru dengan nomor berikutnya (mis. `20261201000006_….sq
 | Gejala | Penyebab umum | Solusi |
 |---|---|---|
 | Aplikasi menampilkan "Konfigurasi belum lengkap" | `EXPO_PUBLIC_SUPABASE_*` kosong saat build | Isi env var di EAS (tahap 8) lalu build ulang |
-| Email konfirmasi/reset tidak sampai | SMTP bawaan Supabase / domain belum diverifikasi | Pasang SMTP sendiri (4.3), cek folder spam, cek Auth Logs |
-| Tautan email membuka halaman "Link tidak valid" | Link kedaluwarsa/sudah dipakai, atau URL belum ada di Redirect URLs | Tambahkan `https://<akun>.github.io/Kask/**` (4.2), minta link baru |
+| Kode WhatsApp tidak masuk, Logs `send-whatsapp-otp` kosong | Hook belum aktif / URL hook salah | Periksa Authentication → Auth Hooks (4.3) |
+| Logs berisi "Tanda tangan hook tidak valid" | `SEND_SMS_HOOK_SECRET` beda dengan rahasia di dashboard | Salin ulang rahasia `v1,whsec_...`, `supabase secrets set`, deploy ulang |
+| Logs berisi "WhatsApp Cloud API gagal" | Token kedaluwarsa, template belum disetujui, nama/bahasa template beda, atau saldo habis | Cek pesan error di log, status template di WhatsApp Manager, metode pembayaran |
+| Logs berisi "Fonnte gagal" | Device Fonnte terputus / kuota habis | Scan ulang QR di dashboard Fonnte, cek paket |
+| Aplikasi: "Layanan kode WhatsApp belum dikonfigurasi" | Phone provider belum aktif / hook belum aktif | Tahap 4.2 & 4.3 |
+| Aplikasi: "Terlalu sering meminta kode" | Rate limit OTP Supabase | Tunggu, atau naikkan batas di Authentication → Rate Limits |
+| Aplikasi: "Kode salah atau sudah kedaluwarsa" | Kode lama / lewat batas waktu | Tekan "Kirim ulang kode"; naikkan SMS OTP Expiry ke 300 detik |
+| Warga ganti nomor WhatsApp | Nomor = identitas login | Ubah di Dashboard → Authentication → Users → user → nomor telepon; profil ikut berubah otomatis |
 | Halaman reset bilang "belum dikonfigurasi" | `site:build` dijalankan tanpa `mobile/.env` | Isi `.env`, jalankan ulang `npm run site:build`, commit `docs/` |
 | Push tidak muncul, tapi lonceng ada notifikasi | Webhook/Edge Function belum jalan | Cek Logs Edge Function: `401` berarti secret beda; tidak ada log berarti webhook belum dibuat |
 | Push tidak muncul sama sekali di Android | FCM V1 key belum diunggah / `google-services.json` tidak ikut build | Tahap 7.1 & 8, lalu build ulang |

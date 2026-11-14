@@ -1,4 +1,4 @@
-# Kask
+# Kasmee
 
 Aplikasi Android & iOS untuk pengelolaan **iuran wajib & sukarela**, **laporan kas**, dan **berita/pengumuman** warga. Satu aplikasi bisa dipakai banyak komunitas sekaligus, baik **satu RT** maupun **satu RW**, dan data tiap komunitas terpisah total.
 
@@ -10,7 +10,7 @@ Aplikasi Android & iOS untuk pengelolaan **iuran wajib & sukarela**, **laporan k
 ```
 mobile/                 Aplikasi Expo (Android & iOS dari satu kode)
 supabase/migrations/    Skema database, RLS, trigger, fungsi RPC
-supabase/functions/     Edge Function pengirim push notification
+supabase/functions/     Edge Function: push notification & kirim OTP WhatsApp
 supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 ```
 
@@ -20,7 +20,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 ## Fitur
 
 **Warga**
-- Daftar/masuk, lalu bergabung ke komunitas memakai **kode undangan** (perlu disetujui pengurus)
+- Daftar/masuk dengan **nomor WhatsApp** (kode verifikasi & lupa password via OTP WhatsApp), lalu bergabung ke komunitas memakai **kode undangan** (perlu disetujui pengurus)
 - Melihat tagihan iuran wajib dan membayar dengan unggah bukti transfer/QRIS, atau tunai
 - Ikut menyumbang ke iuran sukarela (donasi) dengan progres target dana
 - Melihat **laporan kas** bulanan/tahunan (saldo awal, pemasukan, pengeluaran, per kategori) agar transparan
@@ -46,6 +46,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Mengangkat/menurunkan pengurus, menentukan jabatannya, dan (di komunitas RW) **membatasi wewenangnya ke satu RT**
 - **Serah terima jabatan ketua** (ketua lama otomatis menjadi pengurus)
 - Mengubah data komunitas, info rekening, daftar RT, dan mengganti kode undangan
+- Mengunggah **logo komunitas** yang tampil di header Beranda semua anggota
 
 **Super admin (developer)**
 - Melihat semua komunitas beserta jumlah anggota, ketua, dan saldonya
@@ -78,9 +79,9 @@ Langganan berlaku **per komunitas**: ketua yang berlangganan, dan semua anggotan
 - Isinya ditulis sekali di `mobile/src/content/legal.ts`. Kebijakan Privasi disusun mengacu UU No. 27/2022 tentang Pelindungan Data Pribadi.
 - **Halaman publik** (wajib untuk Play Console & App Store Connect): jalankan
   ```bash
-  cd mobile && npm run site:build   # membaca nama, email, dan URL Supabase dari mobile/.env
+  cd mobile && npm run site:build   # membaca nama & email dukungan dari mobile/.env
   ```
-  Perintah ini juga membuat halaman `konfirmasi-email.html` dan `reset-password.html` (tujuan tautan email Supabase). Lalu publikasikan folder `docs/`, misalnya lewat GitHub Pages (Settings → Pages → branch, folder `/docs`). Gunakan URL `…/privacy-policy.html` sebagai Privacy Policy URL, dan `…/index.html` sebagai URL penghapusan akun di Play Console.
+  Lalu publikasikan folder `docs/`, misalnya lewat GitHub Pages (Settings → Pages → branch, folder `/docs`). Gunakan URL `…/privacy-policy.html` sebagai Privacy Policy URL, dan `…/index.html` sebagai URL penghapusan akun di Play Console.
 - Isi juga `EXPO_PUBLIC_DEVELOPER_NAME` dan `EXPO_PUBLIC_SUPPORT_EMAIL` di `.env` / EAS agar versi di aplikasi tidak menampilkan placeholder.
 - **Hapus akun** (wajib App Store & Google Play): Akun → Hapus akun. Login dihapus, profil dianonimkan ("Akun dihapus"), HP/alamat/token/notifikasi dihapus, keanggotaan dinonaktifkan. Catatan tagihan, pembayaran, dan kas komunitas **tetap utuh** agar laporan tidak berubah. Ketua harus menyerahkan jabatan dulu; ketua yang sendirian ikut menghapus komunitasnya.
 
@@ -132,13 +133,13 @@ Peran per komunitas:
 
 1. Buat proyek di [supabase.com](https://supabase.com).
 2. Jalankan migrasi, pilih salah satu cara:
-   - **SQL Editor**: salin lalu jalankan isi `supabase/migrations/20261108000001_init.sql`, kemudian `20261108000002_storage.sql`, sesuai urutan.
+   - **SQL Editor**: salin lalu jalankan semua file di `supabase/migrations/` sesuai urutan nama file.
    - **Supabase CLI**: `supabase link --project-ref <ref>` lalu `supabase db push`.
-3. Di **Authentication → Providers → Email**, atur apakah perlu konfirmasi email.
+3. Aktifkan login **Phone** dan pasang **Send SMS Hook** ke Edge Function `send-whatsapp-otp` (Meta WhatsApp Cloud API atau Fonnte). Langkah lengkap ada di [PANDUAN-DEPLOY.md tahap 4](PANDUAN-DEPLOY.md#4-login-whatsapp-otp-lewat-whatsapp). Untuk simulasi tanpa gateway, pakai *Test Phone Numbers and OTPs*.
 4. Daftar akun lewat aplikasi, lalu jadikan akun developer sebagai super admin lewat SQL Editor:
    ```sql
    update public.profiles set is_super_admin = true
-   where id = (select id from auth.users where email = 'email-anda@contoh.com');
+   where id = (select id from auth.users where phone = '6281234567890');  -- nomor WA Anda tanpa "+"
    ```
 
 ### 2. Aplikasi mobile
@@ -186,7 +187,7 @@ Sebelum rilis, ganti `ios.bundleIdentifier` / `android.package` di `mobile/app.j
 
 ## Tes
 
-Tes database menjalankan 123 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis), batas anggota paket Gratis, dan hapus akun (data pribadi hilang, catatan kas komunitas tetap utuh).
+Tes database menjalankan 138 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis), batas anggota paket Gratis, hapus akun (data pribadi hilang, catatan kas komunitas tetap utuh), login nomor WhatsApp (nomor tersinkron ke profil), dan logo komunitas (hanya ketua yang bisa mengganti).
 
 ```bash
 DATABASE_URL=postgres://postgres@localhost:5432/kask_test ./supabase/tests/run_local.sh

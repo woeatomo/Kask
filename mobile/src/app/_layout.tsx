@@ -13,13 +13,15 @@ import { colors } from '@/lib/theme';
 export { ErrorBoundary } from 'expo-router';
 
 function RootNavigator() {
-  const { session, loading: authLoading, profile } = useAuth();
+  const { session, loading: authLoading, profile, recovering } = useAuth();
   const { current, loading: communityLoading } = useCommunity();
 
   if (authLoading || (session && communityLoading)) return <Loading />;
 
   const signedIn = !!session;
-  const hasCommunity = signedIn && !!current;
+  // saat alur lupa password, user sudah punya sesi tapi wajib membuat password baru dulu
+  const ready = signedIn && !recovering;
+  const hasCommunity = ready && !!current;
   const isAdmin = !!profile?.is_super_admin;
 
   return (
@@ -41,25 +43,29 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={signedIn && !hasCommunity}>
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="set-password" options={{ title: 'Password Baru', headerBackVisible: !recovering, gestureEnabled: !recovering }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={ready && !hasCommunity}>
         <Stack.Screen name="onboarding" options={{ title: 'Selamat datang', headerBackVisible: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={ready}>
         <Stack.Screen name="create-community" options={{ title: 'Buat Komunitas' }} />
         <Stack.Screen name="join-community" options={{ title: 'Gabung Komunitas' }} />
         <Stack.Screen name="profile" options={{ title: 'Profil Saya' }} />
         <Stack.Screen name="notifications" options={{ title: 'Notifikasi' }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={signedIn && isAdmin}>
+      <Stack.Protected guard={ready && isAdmin}>
         <Stack.Screen name="admin" options={{ title: 'Panel Admin' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={hasCommunity}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pay" options={{ title: 'Bayar Iuran', presentation: 'modal' }} />
-        <Stack.Screen name="premium" options={{ title: 'Kask Premium' }} />
+        <Stack.Screen name="premium" options={{ title: 'Kasmee Premium' }} />
         <Stack.Screen name="news/[id]" options={{ title: 'Berita' }} />
         <Stack.Screen name="news/edit" options={{ title: 'Tulis Berita', presentation: 'modal' }} />
         <Stack.Screen name="manage/dues" options={{ title: 'Kelola Iuran' }} />

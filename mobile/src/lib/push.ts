@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -27,8 +27,13 @@ export interface PushData {
  * Minta izin notifikasi lalu daftarkan Expo push token ke Supabase.
  * Aman dipanggil berulang. Mengembalikan null jika tidak didukung / ditolak.
  */
+/** Expo Go tidak mendukung push (Android sejak SDK 53); notifikasi tetap ada di kotak masuk */
+export function isExpoGo(): boolean {
+  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient || Constants.appOwnership === 'expo';
+}
+
 export async function registerForPush(): Promise<string | null> {
-  if (Platform.OS === 'web' || !Device.isDevice) return null;
+  if (Platform.OS === 'web' || !Device.isDevice || isExpoGo()) return null;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {

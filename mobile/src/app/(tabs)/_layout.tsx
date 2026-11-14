@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router/js-tabs';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
+import { CommunityHeaderTitle } from '@/components/CommunityAvatar';
 import { useCommunity } from '@/context/CommunityContext';
 import { colors } from '@/lib/theme';
 
@@ -26,7 +27,15 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Beranda', headerTitle: current.communities.name, tabBarIcon: icon('home-outline') }} />
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Beranda',
+          headerTitle: () => <CommunityHeaderTitle community={current.communities} />,
+          headerTitleAlign: 'left',
+          tabBarIcon: icon('home-outline'),
+        }}
+      />
       <Tabs.Screen name="iuran" options={{ title: 'Iuran', tabBarIcon: icon('wallet-outline') }} />
       <Tabs.Screen name="kas" options={{ title: 'Kas', headerTitle: 'Laporan Kas', tabBarIcon: icon('stats-chart-outline') }} />
       <Tabs.Screen name="berita" options={{ title: 'Berita', tabBarIcon: icon('newspaper-outline') }} />

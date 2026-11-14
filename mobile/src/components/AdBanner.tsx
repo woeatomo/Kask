@@ -1,19 +1,24 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, TurboModuleRegistry, View } from 'react-native';
 import { useCommunity } from '@/context/CommunityContext';
 import { space } from '@/lib/theme';
 
 type AdsModule = typeof import('react-native-google-mobile-ads');
 
 /**
- * Modul iklan bersifat native: tidak ada di Expo Go dan akan error saat di-import.
- * Dimuat secara lazy agar aplikasi tetap jalan tanpa iklan di lingkungan tersebut.
+ * Modul iklan bersifat native: tidak ada di Expo Go, dan library-nya langsung
+ * error saat di-import (TurboModuleRegistry.getEnforcing). try/catch saja tidak
+ * cukup karena di mode development Metro melaporkan error import sebagai fatal.
+ * Jadi kita cek dulu apakah native module-nya terdaftar sebelum require.
  */
+const ADS_NATIVE_MODULE = 'RNGoogleMobileAdsModule';
+
 let ads: AdsModule | null | undefined;
 function loadAds(): AdsModule | null {
   if (ads !== undefined) return ads;
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return (ads = null);
+  if (TurboModuleRegistry.get(ADS_NATIVE_MODULE) == null) return (ads = null);
   try {
     ads = require('react-native-google-mobile-ads') as AdsModule;
   } catch {

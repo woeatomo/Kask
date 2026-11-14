@@ -1,0 +1,12 @@
+<!-- Kasmee: atap rumah (komunitas) + koin (kas) dengan huruf K. Tanpa latar. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M236 468 L512 250 L788 468" stroke-width="76"/>
+  </g>
+  <circle cx="512" cy="612" r="196" fill="#FFFFFF"/>
+  <g fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="58">
+    <path d="M452 520 L452 704"/>
+    <path d="M588 520 L472 612 L592 704"/>
+  </g>
+  <circle cx="772" cy="318" r="30" fill="#FBBF24"/>
+</svg>

@@ -31,7 +31,9 @@ export function errorMessage(e: unknown): string {
   if (typeof e === 'string') return e;
   const msg = (e as { message?: string }).message ?? 'Terjadi kesalahan';
   if (msg.includes('row-level security')) return 'Anda tidak memiliki izin untuk aksi ini';
-  if (msg.includes('Invalid login credentials')) return 'Email atau password salah';
-  if (msg.includes('User already registered')) return 'Email sudah terdaftar';
+  if (msg.includes('Invalid login credentials')) return 'Nomor WhatsApp atau password salah';
+  if (/already registered|already exists/i.test(msg)) return 'Nomor WhatsApp ini sudah terdaftar. Silakan masuk atau gunakan "Lupa password?".';
+  if (/rate limit|only request this after/i.test(msg)) return 'Terlalu sering meminta kode. Tunggu sebentar lalu coba lagi.';
+  if (/phone provider|sms provider|Unable to get SMS provider/i.test(msg)) return 'Layanan kode WhatsApp belum dikonfigurasi. Hubungi pengelola Kasmee.';
   return msg;
 }

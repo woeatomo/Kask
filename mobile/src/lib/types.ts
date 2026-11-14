@@ -31,6 +31,8 @@ export interface Community {
   bank_info: string | null;
   invite_code: string;
   is_active: boolean;
+  /** path di bucket publik 'community-logos', null = belum ada logo */
+  logo_path: string | null;
   plan: CommunityPlan;
   /** null + premium = tanpa batas waktu */
   plan_expires_at: string | null;

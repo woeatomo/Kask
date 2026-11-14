@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Alert, Share, Text, View } from 'react-native';
+import { CommunityAvatar } from '@/components/CommunityAvatar';
 import { Badge, Body, Button, Card, ListItem, Muted, Screen, SectionTitle, styles as ui } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentCommunity } from '@/context/CommunityContext';
 import { ROLE_LABEL, communityLabel } from '@/lib/format';
+import { formatPhone } from '@/lib/phone';
 import { unregisterPush } from '@/lib/push';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
@@ -17,14 +19,14 @@ export default function Akun() {
 
   function shareCode() {
     Share.share({
-      message: `Gabung ke ${c.name} (${communityLabel(c)}) di aplikasi Kask dengan kode undangan: ${c.invite_code}`,
+      message: `Gabung ke ${c.name} (${communityLabel(c)}) di aplikasi Kasmee dengan kode undangan: ${c.invite_code}`,
     });
   }
 
   function deleteAccount() {
     Alert.alert(
       'Hapus akun?',
-      'Login, nama, nomor HP, alamat, dan notifikasi Anda akan dihapus permanen. Catatan iuran dan kas komunitas tetap disimpan tanpa nama agar laporan kas tetap akurat. Tindakan ini tidak bisa dibatalkan.',
+      'Login, nama, nomor WhatsApp, alamat, dan notifikasi Anda akan dihapus permanen. Catatan iuran dan kas komunitas tetap disimpan tanpa nama agar laporan kas tetap akurat. Tindakan ini tidak bisa dibatalkan.',
       [
         { text: 'Batal', style: 'cancel' },
         {
@@ -36,7 +38,7 @@ export default function Akun() {
             if (error) return Alert.alert('Tidak bisa menghapus akun', errorMessage(error));
             // sesi sudah tidak berlaku di server; bersihkan sesi lokal saja
             await supabase.auth.signOut({ scope: 'local' });
-            Alert.alert('Akun dihapus', 'Terima kasih telah menggunakan Kask.');
+            Alert.alert('Akun dihapus', 'Terima kasih telah menggunakan Kasmee.');
           },
         },
       ],
@@ -65,8 +67,7 @@ export default function Akun() {
           <Ionicons name="person-circle" size={52} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Body style={{ fontWeight: '700', fontSize: 17 }}>{profile?.full_name || '-'}</Body>
-            <Muted>{session?.user.email}</Muted>
-            {profile?.phone ? <Muted>{profile.phone}</Muted> : null}
+            <Muted>WhatsApp {formatPhone(profile?.phone ?? (session?.user.phone ? `+${session.user.phone}` : null))}</Muted>
           </View>
         </View>
         <Button title="Ubah profil" small variant="secondary" onPress={() => router.push('/profile')} style={{ marginTop: space.md, alignSelf: 'flex-start' }} />
@@ -74,11 +75,16 @@ export default function Akun() {
 
       <SectionTitle>Komunitas aktif</SectionTitle>
       <Card>
-        <Body style={{ fontWeight: '700' }}>{c.name}</Body>
-        <Muted>
-          {communityLabel(c)}
-          {c.kelurahan ? ` · ${c.kelurahan}` : ''}
-        </Muted>
+        <View style={[ui.row, { gap: space.md }]}>
+          <CommunityAvatar community={c} size={48} />
+          <View style={{ flex: 1 }}>
+            <Body style={{ fontWeight: '700' }}>{c.name}</Body>
+            <Muted>
+              {communityLabel(c)}
+              {c.kelurahan ? ` · ${c.kelurahan}` : ''}
+            </Muted>
+          </View>
+        </View>
         <View style={[ui.row, { gap: space.sm, marginTop: space.sm }]}>
           <Badge text={ROLE_LABEL[current.role]} tone={current.role === 'warga' ? 'neutral' : 'info'} />
           {current.position ? <Badge text={current.position} tone="neutral" /> : null}
@@ -132,7 +138,7 @@ export default function Akun() {
         <ListItem icon="notifications-outline" title="Notifikasi" onPress={() => router.push('/notifications')} />
         <ListItem
           icon="star-outline"
-          title={isPremium ? 'Kask Premium (aktif)' : 'Upgrade ke Premium'}
+          title={isPremium ? 'Kasmee Premium (aktif)' : 'Upgrade ke Premium'}
           subtitle={isPremium ? undefined : 'Export PDF & tanpa iklan'}
           onPress={() => router.push('/premium')}
         />
