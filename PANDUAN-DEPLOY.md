@@ -80,7 +80,13 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 ```bash
 node -v          # Node.js 20 atau lebih baru (proyek dites dengan Node 22)
 git --version
-npm install -g supabase       # Supabase CLI (atau: brew install supabase/tap/supabase)
+# Supabase CLI — pilih salah satu:
+#   macOS   : brew install supabase/tap/supabase
+#   Windows : scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+#             scoop install supabase
+#   semua OS: tanpa install, ganti setiap perintah `supabase ...` dengan `npx supabase@latest ...`
+#   (install global lewat `npm install -g supabase` TIDAK didukung)
+supabase --version
 npx eas-cli@latest --version  # EAS CLI, cukup dipanggil lewat npx
 ```
 
