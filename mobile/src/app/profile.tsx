@@ -30,7 +30,7 @@ export default function ProfileScreen() {
         <Muted>Nomor WhatsApp (untuk masuk)</Muted>
         <Body style={{ fontWeight: '700', marginTop: 2 }}>{formatPhone(profile?.phone)}</Body>
         <Muted style={{ marginTop: space.sm }}>
-          Nomor login tidak bisa diubah dari aplikasi. Jika ganti nomor, hubungi pengelola Kask.
+          Nomor login tidak bisa diubah dari aplikasi. Jika ganti nomor, hubungi pengelola Kasmee.
         </Muted>
       </Card>
       <Button title="Simpan" onPress={save} loading={saving} />

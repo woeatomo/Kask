@@ -1,4 +1,4 @@
-# Kask
+# Kasmee
 
 Aplikasi Android & iOS untuk pengelolaan **iuran wajib & sukarela**, **laporan kas**, dan **berita/pengumuman** warga. Satu aplikasi bisa dipakai banyak komunitas sekaligus, baik **satu RT** maupun **satu RW**, dan data tiap komunitas terpisah total.
 
@@ -46,6 +46,7 @@ supabase/tests/         Tes otomatis alur & isolasi data (Postgres lokal)
 - Mengangkat/menurunkan pengurus, menentukan jabatannya, dan (di komunitas RW) **membatasi wewenangnya ke satu RT**
 - **Serah terima jabatan ketua** (ketua lama otomatis menjadi pengurus)
 - Mengubah data komunitas, info rekening, daftar RT, dan mengganti kode undangan
+- Mengunggah **logo komunitas** yang tampil di header Beranda semua anggota
 
 **Super admin (developer)**
 - Melihat semua komunitas beserta jumlah anggota, ketua, dan saldonya
@@ -186,7 +187,7 @@ Sebelum rilis, ganti `ios.bundleIdentifier` / `android.package` di `mobile/app.j
 
 ## Tes
 
-Tes database menjalankan 130 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis), batas anggota paket Gratis, hapus akun (data pribadi hilang, catatan kas komunitas tetap utuh), dan login nomor WhatsApp (nomor tersinkron ke profil).
+Tes database menjalankan 138 skenario terhadap Postgres biasa, memakai stub skema `auth`/`storage` Supabase. Skenario yang dites antara lain: alur bergabung → approve → buat tagihan → bayar → verifikasi → kas, laporan kas (semua kas/RW/RT), perubahan peran, serah terima ketua, panel admin, **isolasi data antar komunitas**, **batas wewenang pengurus RT**, notifikasi (siapa menerima apa), antrean push (tidak terkirim dua kali), paket langganan (hanya admin yang bisa mengubah, kedaluwarsa otomatis), batas anggota paket Gratis, hapus akun (data pribadi hilang, catatan kas komunitas tetap utuh), login nomor WhatsApp (nomor tersinkron ke profil), dan logo komunitas (hanya ketua yang bisa mengganti).
 
 ```bash
 DATABASE_URL=postgres://postgres@localhost:5432/kask_test ./supabase/tests/run_local.sh

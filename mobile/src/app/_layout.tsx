@@ -65,7 +65,7 @@ function RootNavigator() {
       <Stack.Protected guard={hasCommunity}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pay" options={{ title: 'Bayar Iuran', presentation: 'modal' }} />
-        <Stack.Screen name="premium" options={{ title: 'Kask Premium' }} />
+        <Stack.Screen name="premium" options={{ title: 'Kasmee Premium' }} />
         <Stack.Screen name="news/[id]" options={{ title: 'Berita' }} />
         <Stack.Screen name="news/edit" options={{ title: 'Tulis Berita', presentation: 'modal' }} />
         <Stack.Screen name="manage/dues" options={{ title: 'Kelola Iuran' }} />

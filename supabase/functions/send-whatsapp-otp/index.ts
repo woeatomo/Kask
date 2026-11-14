@@ -15,7 +15,7 @@
 //   -- meta --
 //   WA_META_TOKEN          access token permanen (System User) WhatsApp Business
 //   WA_META_PHONE_ID       Phone number ID pengirim
-//   WA_META_TEMPLATE       nama template kategori AUTHENTICATION (default "kask_otp")
+//   WA_META_TEMPLATE       nama template kategori AUTHENTICATION (default "kasmee_otp")
 //   WA_META_LANG           kode bahasa template (default "id")
 //   WA_META_API_VERSION    versi Graph API (default "v23.0")
 //   -- fonnte --
@@ -25,7 +25,7 @@
 
 import { Webhook } from 'npm:standardwebhooks@1.1.1';
 
-const APP_NAME = 'Kask';
+const APP_NAME = 'Kasmee';
 
 function ok() {
   return Response.json({});
@@ -49,7 +49,7 @@ async function sendViaMeta(phone: string, otp: string): Promise<string | null> {
       to: phone,
       type: 'template',
       template: {
-        name: Deno.env.get('WA_META_TEMPLATE') ?? 'kask_otp',
+        name: Deno.env.get('WA_META_TEMPLATE') ?? 'kasmee_otp',
         language: { code: Deno.env.get('WA_META_LANG') ?? 'id' },
         // Template autentikasi: kode di body + tombol "Salin kode"
         components: [

@@ -68,7 +68,7 @@ export default function FaqScreen() {
         <Muted style={{ marginVertical: space.sm }}>Hubungi kami di {SUPPORT_EMAIL}</Muted>
         <View style={[ui.row, { gap: space.sm, flexWrap: 'wrap' }]}>
           {SUPPORT_EMAIL.includes('@') && (
-            <Button title="Kirim email" icon="mail-outline" small onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Pertanyaan%20Kask`)} />
+            <Button title="Kirim email" icon="mail-outline" small onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Pertanyaan%20Kasmee`)} />
           )}
           <Button title="Kebijakan Privasi" small variant="secondary" onPress={() => router.push('/privacy')} />
         </View>

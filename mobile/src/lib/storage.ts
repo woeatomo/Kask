@@ -2,7 +2,7 @@ import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from './supabase';
 
-export type Bucket = 'payment-proofs' | 'news-images';
+export type Bucket = 'payment-proofs' | 'news-images' | 'community-logos';
 
 export interface PickedImage {
   uri: string;
@@ -10,14 +10,18 @@ export interface PickedImage {
   mimeType: string;
 }
 
-/** Pilih gambar dari galeri. Mengembalikan null jika dibatalkan. */
-export async function pickImage(): Promise<PickedImage | null> {
+/**
+ * Pilih gambar dari galeri. Mengembalikan null jika dibatalkan.
+ * square: potong persegi (untuk logo).
+ */
+export async function pickImage(opts: { square?: boolean } = {}): Promise<PickedImage | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) throw new Error('Izin akses galeri ditolak');
   const res = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    quality: 0.6,
+    quality: opts.square ? 0.8 : 0.6,
     base64: true,
+    ...(opts.square ? { allowsEditing: true, aspect: [1, 1] as [number, number] } : {}),
   });
   if (res.canceled || !res.assets[0]?.base64) return null;
   const a = res.assets[0];
@@ -39,4 +43,10 @@ export async function signedUrl(bucket: Bucket, path: string | null): Promise<st
   if (!path) return null;
   const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
   return data?.signedUrl ?? null;
+}
+
+/** URL publik logo komunitas (bucket publik, tanpa signed URL) */
+export function communityLogoUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return supabase.storage.from('community-logos').getPublicUrl(path).data.publicUrl;
 }

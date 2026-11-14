@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { Body, Button, Card, Chips, Input, Muted, Screen } from '@/components/ui';
+import { View } from 'react-native';
+import { CommunityAvatar } from '@/components/CommunityAvatar';
+import { Body, Button, Card, Chips, Input, Muted, Screen, styles as ui } from '@/components/ui';
 import { useCommunity } from '@/context/CommunityContext';
 import { communityLabel } from '@/lib/format';
 import { errorMessage, supabase } from '@/lib/supabase';
@@ -16,6 +18,7 @@ interface Found {
   rt_number: string | null;
   kelurahan: string | null;
   kota: string | null;
+  logo_path: string | null;
   rt_units: { id: string; rt_number: string; name: string | null }[];
 }
 
@@ -72,12 +75,17 @@ export default function JoinCommunity() {
       {found && (
         <>
           <Card>
-            <Body style={{ fontWeight: '700' }}>{found.name}</Body>
-            <Muted>
-              {communityLabel(found)}
-              {found.kelurahan ? ` · ${found.kelurahan}` : ''}
-              {found.kota ? `, ${found.kota}` : ''}
-            </Muted>
+            <View style={[ui.row, { gap: space.md }]}>
+              <CommunityAvatar community={found} size={48} />
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontWeight: '700' }}>{found.name}</Body>
+                <Muted>
+                  {communityLabel(found)}
+                  {found.kelurahan ? ` · ${found.kelurahan}` : ''}
+                  {found.kota ? `, ${found.kota}` : ''}
+                </Muted>
+              </View>
+            </View>
           </Card>
           {found.type === 'RW' && found.rt_units.length > 0 && (
             <>

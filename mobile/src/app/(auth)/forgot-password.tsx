@@ -23,7 +23,7 @@ export default function ForgotPassword() {
     setLoading(false);
     if (error) {
       const notFound = /signups not allowed|not found|user/i.test(error.message);
-      return Alert.alert('Gagal', notFound ? 'Nomor ini belum terdaftar di Kask.' : errorMessage(error));
+      return Alert.alert('Gagal', notFound ? 'Nomor ini belum terdaftar di Kasmee.' : errorMessage(error));
     }
     router.push({ pathname: '/verify-otp', params: { phone, mode: 'recovery' } });
   }

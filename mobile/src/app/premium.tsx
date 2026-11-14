@@ -29,7 +29,7 @@ export default function Premium() {
   const canShowContact = Platform.OS !== 'ios' && !!UPGRADE_WHATSAPP;
 
   function contact() {
-    const msg = `Halo, saya ingin berlangganan Kask Premium untuk komunitas "${c.name}" (${communityLabel(c)}). ID: ${c.id}`;
+    const msg = `Halo, saya ingin berlangganan Kasmee Premium untuk komunitas "${c.name}" (${communityLabel(c)}). ID: ${c.id}`;
     Linking.openURL(`https://wa.me/${UPGRADE_WHATSAPP}?text=${encodeURIComponent(msg)}`);
   }
 
@@ -83,7 +83,7 @@ export default function Premium() {
               <Button title="Hubungi kami untuk berlangganan" icon="logo-whatsapp" onPress={contact} style={{ marginTop: space.md }} />
             ) : (
               <Muted style={{ marginTop: space.md }}>
-                Untuk berlangganan, hubungi pengelola aplikasi Kask dengan menyebutkan ID komunitas: {c.id}
+                Untuk berlangganan, hubungi pengelola aplikasi Kasmee dengan menyebutkan ID komunitas: {c.id}
               </Muted>
             )
           ) : (

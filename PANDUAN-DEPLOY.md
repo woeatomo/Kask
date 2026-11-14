@@ -1,4 +1,4 @@
-# Panduan Deploy Kask: dari Server sampai Live di Play Store & App Store
+# Panduan Deploy Kasmee: dari Server sampai Live di Play Store & App Store
 
 Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **✅ Cek**, sehingga kalau ada yang salah, ketahuan di tahap itu dan tidak menumpuk.
 
@@ -30,7 +30,7 @@ Panduan ini berurutan: ikuti dari atas ke bawah. Setiap tahap diakhiri dengan **
 ```
  HP warga (Android / iOS)                  Situs publik (GitHub Pages)
  ┌───────────────────────┐                 ┌──────────────────────────────┐
- │ Aplikasi Kask (Expo)   │                 │ FAQ · Kebijakan Privasi      │
+ │ Aplikasi Kasmee (Expo)   │                 │ FAQ · Kebijakan Privasi      │
  │  - login nomor WA      │                 └──────────────────────────────┘
  │  - iuran, kas, berita  │
  │  - iklan AdMob (Gratis)│◄──── kode OTP via WhatsApp ────┐
@@ -221,7 +221,7 @@ Saran: pakai **Fonnte** untuk uji coba atau pilot di 1–2 RT, lalu **Meta** seb
 1. https://developers.facebook.com → **My Apps → Create App** → jenis **Business** → tambahkan produk **WhatsApp**. Ikuti pembuatan/penautan **Meta Business Account**.
 2. **WhatsApp → API Setup**: tambahkan **nomor pengirim** (nomor yang *tidak* sedang dipakai di aplikasi WhatsApp/WA Business biasa) dan verifikasi. Catat **Phone number ID**.
 3. **WhatsApp Manager → Message templates → Create template**:
-   - Category **Authentication**, nama **`kask_otp`**, bahasa **Indonesian (`id`)**
+   - Category **Authentication**, nama **`kasmee_otp`**, bahasa **Indonesian (`id`)**
    - Tipe tombol **Copy code**, lalu kirim untuk persetujuan (biasanya cepat)
 4. **Token permanen**: Business Settings → **System users** → buat system user (Admin) → **Add assets** (aplikasi & akun WhatsApp) → **Generate token** dengan izin `whatsapp_business_messaging` dan `whatsapp_business_management`, tanpa kedaluwarsa.
 5. Tambahkan metode pembayaran di WhatsApp Manager. Untuk batas kirim yang lebih besar, selesaikan **Business Verification**.
@@ -251,7 +251,7 @@ Dashboard → **Authentication → Rate Limits** → naikkan batas **SMS/OTP per
    supabase secrets set WA_PROVIDER=meta \
      WA_META_TOKEN='<token permanen>' \
      WA_META_PHONE_ID='<phone number id>' \
-     WA_META_TEMPLATE=kask_otp WA_META_LANG=id
+     WA_META_TEMPLATE=kasmee_otp WA_META_LANG=id
 
    # --- jika memakai Fonnte ---
    supabase secrets set WA_PROVIDER=fonnte WA_FONNTE_TOKEN='<token device>'
@@ -312,27 +312,30 @@ Dashboard → **Integrations → Database Webhooks** (di dashboard versi lama: *
 
 ## 6. Identitas aplikasi & EAS
 
-### 6.1 Ubah identitas (lakukan SEBELUM build pertama)
-Edit `mobile/app.json`:
+### 6.1 Periksa identitas (lakukan SEBELUM build pertama)
+`mobile/app.json` sudah berisi:
 ```json
-"name": "Kask",
-"slug": "kask",
-"ios":     { "bundleIdentifier": "com.namaanda.kask", ... },
-"android": { "package":          "com.namaanda.kask", ... }
+"name": "Kasmee",
+"slug": "kasmee",
+"ios":     { "bundleIdentifier": "com.kasmee.app", ... },
+"android": { "package":          "com.kasmee.app", ... }
 ```
-- `bundleIdentifier`/`package` harus **unik di seluruh toko** dan **tidak bisa diganti** setelah rilis. Hindari `com.kask.app`, yang sangat mungkin sudah dipakai orang lain.
+- `package`/`bundleIdentifier` harus **unik di seluruh toko** dan **tidak bisa diganti** setelah rilis. Saat membuat aplikasi di Play Console (tahap 11), kalau `com.kasmee.app` ternyata sudah dipakai orang lain, ganti misalnya ke `id.kasmee.app` atau `com.<namaanda>.kasmee`, **sebelum** build production pertama.
 - Pakai huruf kecil, titik, dan tanpa tanda minus untuk Android.
 
 ### 6.2 Ikon & splash
-Ganti file di `mobile/assets/` dengan ukuran yang sama:
+Logo Kasmee sudah terpasang. Sumber vektornya ada di `mobile/assets/brand/`:
 
 | File | Ukuran | Keterangan |
 |---|---|---|
 | `icon.png` | 1024×1024 | ikon iOS & toko, tanpa transparansi |
-| `android-icon-foreground.png` | 512×512 | logo di tengah, area aman ±66% |
-| `android-icon-background.png` | 512×512 | latar ikon Android |
+| `android-icon-foreground.png` | 512×512 | logo di zona aman tengah (adaptive icon) |
+| `android-icon-background.png` | 512×512 | latar gradasi teal |
 | `android-icon-monochrome.png` | 432×432 | ikon tema Android 13+ |
 | `splash-icon.png` | 1024×1024 | logo layar pembuka |
+| `logo-kasmee.png` | 512×512 | logo di layar masuk/daftar & situs publik |
+
+Ikon Play Store (512×512) bisa memakai `icon.png` yang diperkecil. Untuk mengganti desain, edit SVG di `mobile/assets/brand/` lalu render ulang ke ukuran-ukuran di atas.
 
 ### 6.3 Hubungkan ke EAS
 ```bash
@@ -376,7 +379,7 @@ Selama App ID dan Ad unit ID belum diisi, aplikasi memakai **iklan tes Google**.
 
 ## 8. Environment variable di EAS
 
-`mobile/.env` hanya dipakai di komputer lokal. Build di server EAS membaca variabel dari **expo.dev → proyek Kask → Environment variables**. Isi untuk environment **development**, **preview**, dan **production** (eas.json sudah memetakan setiap profil build ke environment-nya).
+`mobile/.env` hanya dipakai di komputer lokal. Build di server EAS membaca variabel dari **expo.dev → proyek Kasmee → Environment variables**. Isi untuk environment **development**, **preview**, dan **production** (eas.json sudah memetakan setiap profil build ke environment-nya).
 
 | Nama | Nilai | Tipe / visibilitas |
 |---|---|---|
@@ -405,7 +408,7 @@ Push notification, iklan, dan pemblokiran screenshot **tidak berjalan di Expo Go
 cd mobile
 npx eas-cli@latest build --profile development --platform android
 # selesai ±10–20 menit → buka link/QR dari EAS di HP Android → install APK
-npx expo start --dev-client     # lalu buka aplikasi Kask (dev) di HP & scan QR
+npx expo start --dev-client     # lalu buka aplikasi Kasmee (dev) di HP & scan QR
 ```
 Untuk iPhone, `--platform ios` butuh akun Apple Developer, dan perangkat harus didaftarkan lebih dulu lewat `npx eas-cli@latest device:create`.
 
@@ -457,7 +460,7 @@ npx eas-cli@latest build --profile production --platform android
 Hasilnya file **.aab**. Nomor build naik otomatis (`autoIncrement`), dan kunci upload dikelola EAS.
 
 ### 11.2 Buat aplikasi di Play Console
-**Create app** → nama "Kask", bahasa Indonesia, *App*, *Free*. Centang deklarasi.
+**Create app** → nama "Kasmee", bahasa Indonesia, *App*, *Free*. Centang deklarasi.
 
 ### 11.3 Lengkapi "App content" / "Policy"
 | Bagian | Isi |
@@ -470,7 +473,7 @@ Hasilnya file **.aab**. Nomor build naik otomatis (`autoIncrement`), dan kunci u
 | Data safety | lihat tabel di bawah |
 | Data deletion | URL: `https://<akun>.github.io/Kask/index.html` (berisi cara hapus akun) |
 | Financial features | aplikasi ini **bukan** layanan keuangan (tidak ada pinjaman/rekening). Pilih "tidak menyediakan fitur keuangan" kecuali reviewer meminta lain |
-| News app | **No**. Berita di Kask adalah pengumuman komunitas |
+| News app | **No**. Berita di Kasmee adalah pengumuman komunitas |
 
 **Data safety** (sesuaikan dengan Kebijakan Privasi):
 - **Dikumpulkan**: Name, Phone number (wajib, untuk login & OTP WhatsApp), Address (alamat rumah), Photos (bukti pembayaran, dari pilihan pengguna), *Financial info → Other* (riwayat pembayaran iuran), Device or other IDs (push token, ID iklan via AdMob), App interactions/diagnostics (oleh SDK iklan).
@@ -499,7 +502,7 @@ Perintah ini butuh *Google service account* dengan akses Play Console API. Ikuti
 
 ### 12.1 Buat app di App Store Connect
 https://appstoreconnect.apple.com → **Apps → +** → New App:
-- Platform iOS, nama "Kask" (harus unik di App Store), bahasa Indonesian
+- Platform iOS, nama "Kasmee" (harus unik di App Store), bahasa Indonesian
 - **Bundle ID**: sama dengan `ios.bundleIdentifier` (tahap 6.1). Bila belum muncul, EAS akan mendaftarkannya saat build.
 
 ### 12.2 Build & upload
@@ -525,7 +528,7 @@ Uji ulang skenario tahap 9 di iPhone lewat aplikasi TestFlight. Pastikan push mu
 | Screenshots | iPhone 6.7"/6.9". Kas & Rekap memblokir screenshot, jadi pakai halaman lain |
 
 **Catatan review yang disarankan** (tempel di *Notes*):
-> Kask helps neighbourhood associations (RT/RW) in Indonesia manage dues and community cash books. Demo login: reviewer@… / …. The demo community has Premium enabled. Premium is a plan purchased by the organisation (the neighbourhood association), activated by us after an offline agreement; there is no in-app purchase or external purchase link in the iOS app. Account deletion: Akun → Hapus akun.
+> Kasmee helps neighbourhood associations (RT/RW) in Indonesia manage dues and community cash books. Demo login: reviewer@… / …. The demo community has Premium enabled. Premium is a plan purchased by the organisation (the neighbourhood association), activated by us after an offline agreement; there is no in-app purchase or external purchase link in the iOS app. Account deletion: Akun → Hapus akun.
 
 ⚠️ **Risiko kebijakan pembayaran**: Apple bisa meminta fitur Premium dijual lewat In-App Purchase. Aplikasi iOS sudah tidak menampilkan harga maupun tautan pembayaran. Kalau tetap ditolak, opsinya adalah memasang IAP (mis. RevenueCat) yang memanggil `admin_set_plan` dari server.
 
@@ -549,7 +552,7 @@ Pilih build dari TestFlight → **Add for Review** → **Submit**.
 - [ ] (AdMob) `app-ads.txt` di akar domain
 
 **Aplikasi**
-- [ ] `bundleIdentifier` / `package` final, ikon & splash sudah diganti
+- [ ] `bundleIdentifier` / `package` final (`com.kasmee.app` atau pengganti bila sudah dipakai)
 - [ ] `extra.eas.projectId` ada di app.json
 - [ ] Semua env var EAS terisi untuk **production**, termasuk ID AdMob asli
 - [ ] FCM V1 key terunggah, dan push Android & iOS sudah dites di build preview/TestFlight

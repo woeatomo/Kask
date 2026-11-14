@@ -33,7 +33,7 @@ export default function SetPassword() {
     <Screen>
       <Muted style={{ marginBottom: space.lg }}>
         {recovering
-          ? 'Nomor WhatsApp Anda sudah terverifikasi. Buat password baru untuk masuk ke Kask.'
+          ? 'Nomor WhatsApp Anda sudah terverifikasi. Buat password baru untuk masuk ke Kasmee.'
           : 'Masukkan password baru untuk akun Anda.'}
       </Muted>
       <Input label="Password baru" value={p1} onChangeText={setP1} secureTextEntry autoComplete="new-password" />

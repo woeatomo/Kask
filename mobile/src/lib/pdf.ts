@@ -48,7 +48,7 @@ function footer(printedBy: string, signers: [string, string]) {
       <div>${esc(signers[0])}<div class="line">&nbsp;</div></div>
       <div>${esc(signers[1])}<div class="line">&nbsp;</div></div>
     </div>
-    <p class="footer">Dicetak dari aplikasi Kask pada ${tanggal(now.toISOString())} ${jam} oleh ${esc(printedBy)}.</p>`;
+    <p class="footer">Dicetak dari aplikasi Kasmee pada ${tanggal(now.toISOString())} ${jam} oleh ${esc(printedBy)}.</p>`;
 }
 
 export function wrapDocument(html: string, fileTitle: string) {

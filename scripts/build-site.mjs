@@ -1,4 +1,4 @@
-// Membuat situs publik Kask di folder docs/ (untuk GitHub Pages):
+// Membuat situs publik Kasmee di folder docs/ (untuk GitHub Pages):
 //   index.html            beranda + info hapus akun
 //   privacy-policy.html   Kebijakan Privasi   } isi sama dengan di aplikasi
 //   faq.html              Bantuan & FAQ       } (mobile/src/content/legal.ts)
@@ -9,7 +9,7 @@
 // Pemakaian (dari folder mobile/):
 //   DEVELOPER_NAME="Nama Anda" SUPPORT_EMAIL="dukungan@domain.com" npm run site:build
 // Nama & email boleh juga diambil dari mobile/.env (EXPO_PUBLIC_DEVELOPER_NAME / _SUPPORT_EMAIL).
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,11 +35,11 @@ try {
 const env = (k) => process.env[k] || dotenv[k] || '';
 
 const vars = {
-  developer: env('DEVELOPER_NAME') || env('EXPO_PUBLIC_DEVELOPER_NAME') || 'Pengelola Kask',
+  developer: env('DEVELOPER_NAME') || env('EXPO_PUBLIC_DEVELOPER_NAME') || 'Pengelola Kasmee',
   email: env('SUPPORT_EMAIL') || env('EXPO_PUBLIC_SUPPORT_EMAIL') || '[email dukungan belum diisi]',
   limit: process.env.FREE_MEMBER_LIMIT || 50,
 };
-if (vars.developer === 'Pengelola Kask' || vars.email.startsWith('[')) {
+if (vars.developer === 'Pengelola Kasmee' || vars.email.startsWith('[')) {
   console.warn('⚠️  DEVELOPER_NAME / SUPPORT_EMAIL belum diisi: halaman berisi placeholder.');
 }
 
@@ -51,14 +51,16 @@ const page = (title, body) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} · Kask</title>
+<title>${esc(title)} · Kasmee</title>
+<link rel="icon" type="image/png" href="logo-kasmee.png">
 <style>
   :root { --primary: #0f766e; --text: #0f172a; --muted: #64748b; --border: #e2e8f0; --bg: #f5f7f6; --card: #fff; }
   @media (prefers-color-scheme: dark) { :root { --primary: #5eead4; --text: #e2e8f0; --muted: #94a3b8; --border: #334155; --bg: #0b1220; --card: #111a2b; } }
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); }
   main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-  header a { color: var(--primary); font-weight: 800; font-size: 22px; text-decoration: none; }
+  header a { color: var(--primary); font-weight: 800; font-size: 22px; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+  header img { width: 40px; height: 40px; }
   nav { margin: 8px 0 24px; display: flex; gap: 16px; flex-wrap: wrap; }
   nav a { color: var(--muted); }
   h1 { font-size: 28px; margin: 0 0 4px; }
@@ -72,7 +74,7 @@ const page = (title, body) => `<!doctype html>
 </style>
 </head>
 <body><main>
-<header><a href="index.html">Kask</a></header>
+<header><a href="index.html"><img src="logo-kasmee.png" alt="">Kasmee</a></header>
 <nav><a href="faq.html">Bantuan &amp; FAQ</a><a href="privacy-policy.html">Kebijakan Privasi</a></nav>
 ${body}
 </main></body></html>
@@ -103,7 +105,7 @@ const faq = page(
 
 const index = page(
   'Iuran, kas, dan berita warga RT/RW',
-  `<h1>Kask</h1><p>Aplikasi Android &amp; iOS untuk mengelola iuran wajib dan sukarela, laporan kas, dan pengumuman warga RT/RW.</p>
+  `<h1>Kasmee</h1><p>Aplikasi Android &amp; iOS untuk mengelola iuran wajib dan sukarela, laporan kas, dan pengumuman warga RT/RW.</p>
    <ul><li><a href="faq.html">Bantuan &amp; FAQ</a></li><li><a href="privacy-policy.html">Kebijakan Privasi</a></li></ul>
    <p class="muted">Penghapusan akun: buka aplikasi → Akun → Hapus akun, atau kirim permintaan ke ${text(vars.email)}.</p>`,
 );
@@ -113,4 +115,5 @@ mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'privacy-policy.html'), privacy);
 writeFileSync(join(out, 'faq.html'), faq);
 writeFileSync(join(out, 'index.html'), index);
+copyFileSync(join(root, 'mobile/assets/logo-kasmee.png'), join(out, 'logo-kasmee.png'));
 console.log('Ditulis ke', out);

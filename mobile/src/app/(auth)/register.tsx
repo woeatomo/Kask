@@ -1,6 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, Text } from 'react-native';
+import { Alert, Image, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input, Muted, Title } from '@/components/ui';
 import { normalizePhone } from '@/lib/phone';
@@ -33,7 +33,8 @@ export default function Register() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: space.xl }} keyboardShouldPersistTaps="handled">
-        <Title>Daftar Akun</Title>
+        <Image source={require('../../../assets/logo-kasmee.png')} style={{ width: 56, height: 56, marginBottom: space.md }} accessibilityLabel="Logo Kasmee" />
+        <Title>Daftar Akun Kasmee</Title>
         <Muted style={{ marginBottom: space.lg }}>
           Kode verifikasi akan dikirim ke WhatsApp Anda. Setelah itu Anda bisa membuat komunitas (ketua RT/RW) atau bergabung
           dengan kode undangan.
@@ -55,7 +56,7 @@ export default function Register() {
           <Link href="/privacy" style={{ color: colors.primary, fontWeight: '600' }}>
             Kebijakan Privasi
           </Link>{' '}
-          Kask.
+          Kasmee.
         </Text>
         <Button title="Daftar & kirim kode WhatsApp" icon="logo-whatsapp" onPress={submit} loading={loading} />
         <Button title="Sudah punya akun? Masuk" variant="ghost" onPress={() => router.back()} style={{ marginTop: space.sm }} />

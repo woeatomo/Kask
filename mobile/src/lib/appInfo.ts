@@ -3,7 +3,7 @@ import type { LegalVars } from '@/content/legal';
 import { supabase } from './supabase';
 
 /** Identitas pengelola untuk FAQ & Kebijakan Privasi (wajib diisi sebelum rilis) */
-export const DEVELOPER_NAME = process.env.EXPO_PUBLIC_DEVELOPER_NAME || 'Pengelola Kask';
+export const DEVELOPER_NAME = process.env.EXPO_PUBLIC_DEVELOPER_NAME || 'Pengelola Kasmee';
 export const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || '[email dukungan belum diisi]';
 export const DEFAULT_FREE_MEMBER_LIMIT = 50;
 

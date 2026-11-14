@@ -1,6 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input, Muted, styles as ui } from '@/components/ui';
 import { normalizePhone } from '@/lib/phone';
@@ -33,8 +33,13 @@ export default function Login() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', padding: space.xl }}>
-        <Text style={{ fontSize: 40, fontWeight: '800', color: colors.primary }}>Kask</Text>
-        <Muted style={{ marginBottom: space.xl }}>Iuran, kas, dan berita warga RT / RW</Muted>
+        <View style={[ui.row, { gap: space.md, marginBottom: space.xl }]}>
+          <Image source={require('../../../assets/logo-kasmee.png')} style={{ width: 64, height: 64 }} accessibilityLabel="Logo Kasmee" />
+          <View>
+            <Text style={{ fontSize: 34, fontWeight: '800', color: colors.primary }}>Kasmee</Text>
+            <Muted>Iuran, kas & kabar warga RT/RW</Muted>
+          </View>
+        </View>
         <Input
           label="Nomor WhatsApp"
           value={phoneText}

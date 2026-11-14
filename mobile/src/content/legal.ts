@@ -49,15 +49,15 @@ export const PRIVACY_POLICY: LegalSection[] = [
   {
     title: '1. Tentang kebijakan ini',
     paragraphs: [
-      'Kask adalah aplikasi untuk mengelola iuran, kas, dan pengumuman warga di tingkat RT/RW. Kask dikembangkan dan dikelola oleh {{DEVELOPER}} ("kami").',
+      'Kasmee adalah aplikasi untuk mengelola iuran, kas, dan pengumuman warga di tingkat RT/RW. Kasmee dikembangkan dan dikelola oleh {{DEVELOPER}} ("kami").',
       'Kebijakan Privasi ini menjelaskan data pribadi apa yang kami proses, untuk apa, dengan siapa data dibagikan, berapa lama disimpan, dan hak-hak Anda. Kebijakan ini disusun dengan mengacu pada Undang-Undang Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP).',
-      'Dengan mendaftar dan menggunakan Kask, Anda menyatakan telah membaca dan memahami kebijakan ini.',
+      'Dengan mendaftar dan menggunakan Kasmee, Anda menyatakan telah membaca dan memahami kebijakan ini.',
     ],
   },
   {
     title: '2. Peran kami dan pengurus komunitas',
     paragraphs: [
-      'Kami menyediakan dan mengelola platform Kask. Setiap komunitas (RT atau RW) dikelola oleh pengurusnya sendiri. Ketua dan pengurus menentukan iuran apa yang ditagihkan, menyetujui anggota, memverifikasi pembayaran, dan mencatat transaksi kas komunitasnya.',
+      'Kami menyediakan dan mengelola platform Kasmee. Setiap komunitas (RT atau RW) dikelola oleh pengurusnya sendiri. Ketua dan pengurus menentukan iuran apa yang ditagihkan, menyetujui anggota, memverifikasi pembayaran, dan mencatat transaksi kas komunitasnya.',
       'Data satu komunitas dipisahkan secara teknis dari komunitas lain, sehingga pengurus satu komunitas tidak dapat melihat data komunitas lain.',
     ],
   },
@@ -72,14 +72,14 @@ export const PRIVACY_POLICY: LegalSection[] = [
       'Data iklan (khusus komunitas berpaket Gratis): penyedia iklan Google AdMob dapat mengumpulkan ID iklan perangkat, alamat IP, dan informasi perangkat untuk menampilkan serta mengukur iklan, sesuai persetujuan Anda.',
     ],
     paragraphs: [
-      'Kask tidak mengakses lokasi, kontak, mikrofon, maupun kamera Anda. Akses galeri foto hanya digunakan saat Anda sendiri memilih gambar untuk diunggah.',
+      'Kasmee tidak mengakses lokasi, kontak, mikrofon, maupun kamera Anda. Akses galeri foto hanya digunakan saat Anda sendiri memilih gambar untuk diunggah.',
     ],
   },
   {
     title: '4. Tujuan penggunaan data',
     bullets: [
       'Membuat dan mengelola akun Anda, termasuk memverifikasi nomor WhatsApp dan mengatur ulang kata sandi melalui kode OTP yang dikirim lewat WhatsApp.',
-      'Menjalankan fitur Kask: keanggotaan komunitas, tagihan, pembayaran, verifikasi, laporan kas, dan berita.',
+      'Menjalankan fitur Kasmee: keanggotaan komunitas, tagihan, pembayaran, verifikasi, laporan kas, dan berita.',
       'Mengirim notifikasi terkait aktivitas komunitas Anda, misalnya tagihan baru, status pembayaran, dan pengumuman.',
       'Mengelola paket langganan komunitas (Gratis/Premium) dan menampilkan iklan pada paket Gratis.',
       'Menjaga keamanan layanan, mencegah penyalahgunaan, dan memberikan dukungan teknis.',
@@ -97,12 +97,12 @@ export const PRIVACY_POLICY: LegalSection[] = [
       'Ketua dan pengurus komunitas dapat melihat nomor WhatsApp, alamat, tagihan, riwayat pembayaran, dan foto bukti pembayaran Anda. Di komunitas RW, pengurus yang wewenangnya dibatasi ke satu RT hanya dapat melihat data warga RT tersebut.',
       'Buku kas komunitas dapat dilihat oleh semua anggota demi transparansi. Pemasukan dari iuran yang telah diverifikasi dicatat bersama nama pembayar.',
       'Warga biasa tidak dapat melihat tagihan, pembayaran, maupun bukti pembayaran warga lain.',
-      'Tim pengelola Kask (kami) dapat mengakses data bila diperlukan untuk dukungan teknis, keamanan, atau kewajiban hukum.',
+      'Tim pengelola Kasmee (kami) dapat mengakses data bila diperlukan untuk dukungan teknis, keamanan, atau kewajiban hukum.',
     ],
   },
   {
     title: '6. Penyedia layanan pihak ketiga',
-    intro: 'Kami menggunakan penyedia layanan berikut untuk menjalankan Kask:',
+    intro: 'Kami menggunakan penyedia layanan berikut untuk menjalankan Kasmee:',
     bullets: [
       'Supabase: basis data, autentikasi, dan penyimpanan file (termasuk foto bukti pembayaran dan gambar berita).',
       'Penyedia layanan WhatsApp (Meta WhatsApp Business Platform atau gateway WhatsApp lain yang kami gunakan): pengiriman kode verifikasi (OTP) ke nomor WhatsApp Anda. Yang dikirim hanya nomor tujuan dan isi pesan kode.',
@@ -153,7 +153,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
   {
     title: '11. Anak-anak',
     paragraphs: [
-      'Kask ditujukan untuk warga dewasa (kepala keluarga atau penghuni rumah) yang mengelola iuran lingkungan. Kami tidak dengan sengaja mengumpulkan data pribadi anak di bawah 18 tahun.',
+      'Kasmee ditujukan untuk warga dewasa (kepala keluarga atau penghuni rumah) yang mengelola iuran lingkungan. Kami tidak dengan sengaja mengumpulkan data pribadi anak di bawah 18 tahun.',
     ],
   },
   {
@@ -176,15 +176,15 @@ export const FAQ: FaqCategory[] = [
     title: 'Umum',
     items: [
       {
-        q: 'Apa itu Kask?',
-        a: 'Kask adalah aplikasi untuk mengelola iuran wajib dan sukarela, laporan kas, dan pengumuman di lingkungan RT atau RW. Warga bisa membayar iuran dan melihat laporan kas secara transparan, sementara pengurus bisa menagih, memverifikasi pembayaran, dan mencatat kas dari HP.',
+        q: 'Apa itu Kasmee?',
+        a: 'Kasmee adalah aplikasi untuk mengelola iuran wajib dan sukarela, laporan kas, dan pengumuman di lingkungan RT atau RW. Warga bisa membayar iuran dan melihat laporan kas secara transparan, sementara pengurus bisa menagih, memverifikasi pembayaran, dan mencatat kas dari HP.',
       },
       {
         q: 'Apa bedanya komunitas RT dan RW?',
         a: 'Komunitas RT berisi warga satu RT, dengan Ketua RT sebagai pengurus tertinggi. Komunitas RW bisa berisi beberapa RT, dengan Ketua RW sebagai pengurus tertinggi. Di komunitas RW, warga dikelompokkan per RT, dan setiap RT bisa punya kas, iuran, serta pengumuman sendiri yang dikelola Ketua RT-nya.',
       },
       {
-        q: 'Apakah Kask gratis?',
+        q: 'Apakah Kasmee gratis?',
         a: 'Ya. Semua fitur inti (iuran, verifikasi pembayaran, laporan kas di aplikasi, berita, dan notifikasi) gratis untuk komunitas hingga {{LIMIT}} anggota aktif, dengan iklan. Paket Premium menambahkan export PDF, anggota tanpa batas, dan menghilangkan iklan.',
       },
       {
@@ -264,7 +264,7 @@ export const FAQ: FaqCategory[] = [
       },
       {
         q: 'Bagaimana cara berlangganan?',
-        a: 'Ketua membuka Akun → Upgrade ke Premium untuk melihat cara berlangganan, atau menghubungi pengelola Kask di {{EMAIL}} dengan menyebutkan ID komunitas yang tertera di halaman tersebut.',
+        a: 'Ketua membuka Akun → Upgrade ke Premium untuk melihat cara berlangganan, atau menghubungi pengelola Kasmee di {{EMAIL}} dengan menyebutkan ID komunitas yang tertera di halaman tersebut.',
       },
       {
         q: 'Apa yang terjadi jika masa Premium berakhir?',
@@ -289,7 +289,7 @@ export const FAQ: FaqCategory[] = [
       },
       {
         q: 'Notifikasi tidak muncul di HP saya.',
-        a: 'Pastikan izin notifikasi untuk Kask aktif di pengaturan HP. Semua notifikasi juga tersimpan di ikon lonceng pada halaman Beranda.',
+        a: 'Pastikan izin notifikasi untuk Kasmee aktif di pengaturan HP. Semua notifikasi juga tersimpan di ikon lonceng pada halaman Beranda.',
       },
       {
         q: 'Bagaimana cara menghapus akun?',
